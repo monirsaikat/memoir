@@ -19,12 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?><!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sign in — Memoir</title>
-<link rel="icon" type="image/png" href="assets/img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/app.css"></head>
 <body class="auth-page"><main class="auth-card">
-<img src="assets/img/memoir-logo.png" alt="Memoir" class="auth-logo"><h1>Welcome to Memoir</h1><p>Your notes, quietly kept on your own server.</p>
+<div class="auth-mark">M</div><h1>Welcome to Memoir</h1><p>Your notes, quietly kept on your own server.</p>
 <?php if(isset($_GET['installed'])): ?><div class="notice success">Installation complete. Sign in to continue.</div><?php endif ?>
 <?php if($error): ?><div class="notice error"><?=e($error)?></div><?php endif ?>
 <form method="post"><input type="hidden" name="_csrf" value="<?=csrf_token()?>">

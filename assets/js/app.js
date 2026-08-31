@@ -1,7 +1,7 @@
 (() => {
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const csrf=window.MEMOIR.csrf;
-let current=null, filterFolder='', pinnedOnly=false, saveTimer=null, markdownMode=false;
+let current=null, filterFolder='', pinnedOnly=false, saveTimer=null;
 let draftStyle={icon:'fa-note-sticky',color:'#6F5EE8'};
 
 async function api(action, opts={}) {
@@ -16,115 +16,87 @@ async function api(action, opts={}) {
 const escapeHtml=s=>(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 function stripHtml(html){const d=document.createElement('div');d.innerHTML=html||'';return d.textContent||''}
 function fmtDate(v){try{return new Date(v.replace(' ','T')).toLocaleDateString(undefined,{month:'short',day:'numeric'})}catch{return''}}
-function htmlToMarkdown(html=''){
-  const d=document.createElement('div');d.innerHTML=html;
-  const walk=n=>{
-    if(n.nodeType===Node.TEXT_NODE) return n.nodeValue;
-    if(n.nodeType!==Node.ELEMENT_NODE) return '';
-    const inner=[...n.childNodes].map(walk).join('');
-    const tag=n.tagName.toLowerCase();
-    if(tag==='br') return '\n';
-    if(tag==='strong'||tag==='b') return `**${inner}**`;
-    if(tag==='em'||tag==='i') return `*${inner}*`;
-    if(tag==='u') return inner;
-    if(tag==='h2') return `## ${inner}\n\n`;
-    if(tag==='h3') return `### ${inner}\n\n`;
-    if(tag==='blockquote') return inner.split('\n').map(x=>x?`> ${x}`:'>').join('\n')+'\n\n';
-    if(tag==='pre') return `\n\`\`\`\n${n.textContent}\n\`\`\`\n\n`;
-    if(tag==='a') return `[${inner}](${n.getAttribute('href')||''})`;
-    if(tag==='img') return `![image](${n.getAttribute('src')||''})`;
-    if(tag==='li') return `${inner}\n`;
-    if(tag==='ul') return [...n.children].map(li=>`- ${[...li.childNodes].map(walk).join('')}`).join('\n')+'\n\n';
-    if(tag==='ol') return [...n.children].map((li,i)=>`${i+1}. ${[...li.childNodes].map(walk).join('')}`).join('\n')+'\n\n';
-    if(['p','div'].includes(tag)) return `${inner}\n\n`;
-    return inner;
-  };
-  return [...d.childNodes].map(walk).join('').replace(/\n{3,}/g,'\n\n').trim();
-}
-function markdownToHtml(md=''){
-  let s=escapeHtml(md);
-  s=s.replace(/```([\s\S]*?)```/g,(_,c)=>`<pre>${c.replace(/^\n|\n$/g,'')}</pre>`);
-  s=s.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>');
-  s=s.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
-  s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>');
-  s=s.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g,'<img alt="$1" src="$2">');
-  s=s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-  const lines=s.split('\n'); let out=[], list=null;
-  const flush=()=>{if(list){out.push(list.type==='ul'?`<ul>${list.items.join('')}</ul>`:`<ol>${list.items.join('')}</ol>`);list=null;}};
-  for(const line of lines){
-    let m=line.match(/^[-*] (.+)$/); if(m){if(!list||list.type!=='ul'){flush();list={type:'ul',items:[]}}list.items.push(`<li>${m[1]}</li>`);continue}
-    m=line.match(/^\d+\. (.+)$/); if(m){if(!list||list.type!=='ol'){flush();list={type:'ol',items:[]}}list.items.push(`<li>${m[1]}</li>`);continue}
-    flush(); if(/^<(h2|h3|blockquote|pre|ul|ol)/.test(line)||line==='') out.push(line); else out.push(`<p>${line}</p>`);
-  }
-  flush(); return out.join('\n').replace(/<p><\/p>/g,'');
-}
 
 async function loadNote(id){
   const d=await api('note',{query:`&id=${id}`}); current=d.note; draftStyle={icon:current.icon||'fa-note-sticky',color:current.color||'#6F5EE8'};
   $('#emptyState').classList.add('hidden'); $('#editorView').classList.remove('hidden');
-  $('#noteTitle').value=current.title||''; $('#noteContent').innerHTML=current.content||''; $('#markdownContent').value=htmlToMarkdown(current.content||'');
+  $('#noteTitle').value=current.title||''; $('#noteContent').innerHTML=current.content||'';
   $('#crumbFolder').textContent=current.folder_name||'Unfiled'; $('#updatedAt').textContent=`Updated ${fmtDate(current.updated_at)}`;
   $('#pinNote').classList.toggle('active',current.is_pinned==1); updateWords();
   $$('.note-card').forEach(x=>x.classList.toggle('active',x.dataset.id==id));
 }
 async function refreshList(){
-  const q=$('#globalSearch').value.trim(); let query=`&q=${encodeURIComponent(q)}`;
-  if(filterFolder!=='') query+=`&folder=${encodeURIComponent(filterFolder)}`; if(pinnedOnly) query+='&pinned=1';
+  const q=$('#globalSearch').value.trim();
+  let query=`&q=${encodeURIComponent(q)}`;
+  if(filterFolder!=='') query+=`&folder=${encodeURIComponent(filterFolder)}`;
+  if(pinnedOnly) query+='&pinned=1';
   const d=await api('search',{query}); renderNotes(d.notes);
 }
 function renderNotes(notes){
   $('#listCount').textContent=`${notes.length} notes`;
-  $('#noteList').innerHTML=notes.map(n=>`<button class="note-card ${current&&current.id==n.id?'active':''}" data-id="${n.id}" data-folder="${n.folder_id??''}" data-pinned="${n.is_pinned}"><div class="note-card-top"><i class="fa-solid ${escapeHtml(n.icon)}" style="color:${escapeHtml(n.color||'#6F5EE8')}"></i>${n.is_pinned==1?'<i class="fa-solid fa-thumbtack pin-mini"></i>':''}</div><strong>${escapeHtml(n.title)}</strong><p>${escapeHtml(stripHtml(n.content).slice(0,115))}</p><div class="note-meta"><span>${escapeHtml(n.folder_name||'Unfiled')}</span><time>${fmtDate(n.updated_at)}</time></div></button>`).join('');
+  $('#noteList').innerHTML=notes.map(n=>`<button class="note-card ${current&&current.id==n.id?'active':''}" data-id="${n.id}" data-folder="${n.folder_id??''}" data-pinned="${n.is_pinned}">
+    <div class="note-card-top"><i class="fa-solid ${escapeHtml(n.icon)}" style="color:${escapeHtml(n.color||'#6F5EE8')}"></i>${n.is_pinned==1?'<i class="fa-solid fa-thumbtack pin-mini"></i>':''}</div>
+    <strong>${escapeHtml(n.title)}</strong><p>${escapeHtml(stripHtml(n.content).slice(0,115))}</p>
+    <div class="note-meta"><span>${escapeHtml(n.folder_name||'Unfiled')}</span><time>${fmtDate(n.updated_at)}</time></div></button>`).join('');
 }
-function queueSave(){if(!current)return;$('#saveStatus').textContent='Saving…';clearTimeout(saveTimer);saveTimer=setTimeout(saveNote,650)}
+function queueSave(){
+  if(!current)return; $('#saveStatus').textContent='Saving…'; clearTimeout(saveTimer); saveTimer=setTimeout(saveNote,650);
+}
 async function saveNote(){
   if(!current)return;
-  const content=markdownMode?markdownToHtml($('#markdownContent').value):$('#noteContent').innerHTML;
-  if(markdownMode) $('#noteContent').innerHTML=content;
-  const body={id:current.id,folder_id:current.folder_id??'',title:$('#noteTitle').value,content,icon:draftStyle.icon,color:draftStyle.color,is_pinned:current.is_pinned};
-  try{await api('save-note',{method:'POST',body:JSON.stringify(body)});$('#saveStatus').textContent='Saved';await refreshList()}catch(e){$('#saveStatus').textContent='Save failed'}
+  const body={
+    id:current.id, folder_id:current.folder_id??'', title:$('#noteTitle').value,
+    content:$('#noteContent').innerHTML, icon:draftStyle.icon,color:draftStyle.color,is_pinned:current.is_pinned
+  };
+  try{await api('save-note',{method:'POST',body:JSON.stringify(body)});$('#saveStatus').textContent='Saved';await refreshList()}
+  catch(e){$('#saveStatus').textContent='Save failed'}
 }
-function setMarkdownMode(next){
-  if(!current)return; markdownMode=next;
-  if(markdownMode){$('#markdownContent').value=htmlToMarkdown($('#noteContent').innerHTML);$('#noteContent').classList.add('hidden');$('#richToolbar').classList.add('hidden');$('#markdownContent').classList.remove('hidden')}
-  else{$('#noteContent').innerHTML=markdownToHtml($('#markdownContent').value);$('#markdownContent').classList.add('hidden');$('#richToolbar').classList.remove('hidden');$('#noteContent').classList.remove('hidden')}
-  $('#markdownToggle').classList.toggle('active',markdownMode); updateWords(); queueSave();
-}
-
 $('#noteList').addEventListener('click',e=>{const c=e.target.closest('.note-card');if(c)loadNote(c.dataset.id)});
 $('#newNote').onclick=async()=>{const d=await api('create-note',{method:'POST',body:JSON.stringify({folder_id:filterFolder||null})});await refreshList();await loadNote(d.id);$('#noteTitle').focus()};
-$('#noteTitle').addEventListener('input',queueSave); $('#noteContent').addEventListener('input',()=>{queueSave();updateWords()}); $('#markdownContent').addEventListener('input',()=>{queueSave();updateWords()});
+$('#noteTitle').addEventListener('input',queueSave); $('#noteContent').addEventListener('input',()=>{queueSave();updateWords()});
 $('#pinNote').onclick=()=>{if(!current)return;current.is_pinned=current.is_pinned==1?0:1;$('#pinNote').classList.toggle('active',current.is_pinned==1);queueSave()};
 $('#deleteNote').onclick=async()=>{if(!current||!confirm('Delete this note permanently?'))return;await api('delete-note',{method:'POST',body:JSON.stringify({id:current.id})});current=null;$('#editorView').classList.add('hidden');$('#emptyState').classList.remove('hidden');await refreshList()};
-$('#markdownToggle').onclick=()=>setMarkdownMode(!markdownMode); $('#shortcutsBtn').onclick=()=>openModal('#shortcutsModal');
 
 $$('.nav-item').forEach(b=>b.onclick=()=>{filterFolder=b.dataset.folder??'';pinnedOnly=b.dataset.pinned==='1';$$('.nav-item,.folder-item').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('#listTitle').textContent=pinnedOnly?'Pinned':'All notes';refreshList()});
 $('#folderList').addEventListener('click',e=>{const b=e.target.closest('.folder-item');if(!b)return;filterFolder=b.dataset.folder;pinnedOnly=false;$$('.nav-item,.folder-item').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('#listTitle').textContent=b.querySelector('span').textContent;refreshList()});
-let searchTimer; $('#globalSearch').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(refreshList,220)});
 
-document.addEventListener('keydown',e=>{
-  const meta=e.ctrlKey||e.metaKey; const key=e.key.toLowerCase();
-  if(meta&&key==='k'){e.preventDefault();$('#globalSearch').focus();$('#globalSearch').select()}
-  if(meta&&key==='n'){e.preventDefault();$('#newNote').click()}
-  if(meta&&key==='s'){e.preventDefault();clearTimeout(saveTimer);saveNote()}
-  if(meta&&e.shiftKey&&key==='m'){e.preventDefault();setMarkdownMode(!markdownMode)}
-  if(e.key==='Escape') $$('.modal-backdrop:not(.hidden)').forEach(closeModal);
-});
+let searchTimer; $('#globalSearch').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(refreshList,220)});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#globalSearch').focus();$('#globalSearch').select()}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();$('#newNote').click()}});
+
 $$('.toolbar [data-cmd]').forEach(b=>b.onclick=()=>{document.execCommand(b.dataset.cmd,false,b.dataset.value||null);$('#noteContent').focus();queueSave()});
 $$('.toolbar [data-block]').forEach(b=>b.onclick=()=>{document.execCommand('formatBlock',false,b.dataset.block);$('#noteContent').focus();queueSave()});
 $('#insertLink').onclick=()=>{const u=prompt('Paste URL');if(u)document.execCommand('createLink',false,u)};
 $('#insertImage').onclick=()=>$('#imageInput').click(); $('#imageInput').onchange=e=>e.target.files[0]&&uploadImage(e.target.files[0]);
-$('#noteContent').addEventListener('paste',e=>{const item=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(item){e.preventDefault();const f=item.getAsFile();if(f)uploadImage(f)}});
-$('#noteContent').addEventListener('dragover',e=>e.preventDefault()); $('#noteContent').addEventListener('drop',e=>{const f=[...(e.dataTransfer?.files||[])].find(x=>x.type.startsWith('image/'));if(f){e.preventDefault();uploadImage(f)}});
-async function uploadImage(file){const fd=new FormData();fd.append('image',file);try{const d=await api('upload',{method:'POST',body:fd});document.execCommand('insertImage',false,d.url);queueSave()}catch(e){alert(e.message)}}
-function updateWords(){const t=markdownMode?$('#markdownContent').value.trim():$('#noteContent').innerText.trim();$('#wordCount').textContent=`${t?t.split(/\s+/).length:0} words`}
+
+$('#noteContent').addEventListener('paste',e=>{
+  const item=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));
+  if(item){e.preventDefault();const f=item.getAsFile(); if(f) uploadImage(f);}
+});
+$('#noteContent').addEventListener('dragover',e=>{e.preventDefault()});
+$('#noteContent').addEventListener('drop',e=>{const f=[...(e.dataTransfer?.files||[])].find(x=>x.type.startsWith('image/'));if(f){e.preventDefault();uploadImage(f)}});
+async function uploadImage(file){
+  const fd=new FormData();fd.append('image',file);
+  try{const d=await api('upload',{method:'POST',body:fd});document.execCommand('insertImage',false,d.url);queueSave()}catch(e){alert(e.message)}
+}
+function updateWords(){const t=$('#noteContent').innerText.trim();$('#wordCount').textContent=`${t?t.split(/\s+/).length:0} words`}
 
 function openModal(id){$(id).classList.remove('hidden')} function closeModal(m){m.classList.add('hidden')}
-$$('[data-close]').forEach(b=>b.onclick=()=>closeModal(b.closest('.modal-backdrop'))); $$('.modal-backdrop').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m)}));
-let folderIcon='fa-folder',folderColor='#6F5EE8'; $('#addFolder').onclick=()=>openModal('#folderModal');
+$$('[data-close]').forEach(b=>b.onclick=()=>closeModal(b.closest('.modal-backdrop')));
+$$('.modal-backdrop').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m)}));
+
+let folderIcon='fa-folder',folderColor='#6F5EE8';
+$('#addFolder').onclick=()=>openModal('#folderModal');
 $('#folderIcons').onclick=e=>{const b=e.target.closest('button');if(!b)return;folderIcon=b.dataset.icon;$$('#folderIcons button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};
 $('#folderColors').onclick=e=>{const b=e.target.closest('button');if(!b)return;folderColor=b.dataset.color;$$('#folderColors button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};
 $('#saveFolder').onclick=async()=>{const name=$('#folderName').value.trim();if(!name)return;const d=await api('folder',{method:'POST',body:JSON.stringify({name,icon:folderIcon,color:folderColor})});$('#folderList').insertAdjacentHTML('beforeend',`<button class="folder-item" data-folder="${d.id}"><i class="fa-solid ${d.icon}" style="color:${d.color}"></i><span>${escapeHtml(d.name)}</span><span class="count">0</span></button>`);$('#folderName').value='';closeModal($('#folderModal'))};
-$('#noteStyle').onclick=()=>openModal('#styleModal'); $('#noteIcons').onclick=e=>{const b=e.target.closest('button');if(!b)return;draftStyle.icon=b.dataset.icon;queueSave();$$('#noteIcons button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')}; $('#noteColors').onclick=e=>{const b=e.target.closest('button');if(!b)return;draftStyle.color=b.dataset.color;queueSave();$$('#noteColors button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};
-$('#settingsBtn').onclick=()=>openModal('#settingsModal'); $('#saveSettings').onclick=async()=>{const body={app_name:$('#setAppName').value,smtp_host:$('#setSmtpHost').value,smtp_port:$('#setSmtpPort').value,smtp_security:$('#setSmtpSecurity').value,smtp_user:$('#setSmtpUser').value,smtp_pass:$('#setSmtpPass').value,smtp_from:$('#setSmtpFrom').value};await api('settings',{method:'POST',body:JSON.stringify(body)});closeModal($('#settingsModal'));location.reload()};
+
+$('#noteStyle').onclick=()=>openModal('#styleModal');
+$('#noteIcons').onclick=e=>{const b=e.target.closest('button');if(!b)return;draftStyle.icon=b.dataset.icon;queueSave();$$('#noteIcons button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};
+$('#noteColors').onclick=e=>{const b=e.target.closest('button');if(!b)return;draftStyle.color=b.dataset.color;queueSave();$$('#noteColors button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};
+
+$('#settingsBtn').onclick=()=>openModal('#settingsModal');
+$('#saveSettings').onclick=async()=>{
+  const body={app_name:$('#setAppName').value,smtp_host:$('#setSmtpHost').value,smtp_port:$('#setSmtpPort').value,smtp_security:$('#setSmtpSecurity').value,smtp_user:$('#setSmtpUser').value,smtp_pass:$('#setSmtpPass').value,smtp_from:$('#setSmtpFrom').value};
+  await api('settings',{method:'POST',body:JSON.stringify(body)});closeModal($('#settingsModal'));location.reload();
+};
 })();
