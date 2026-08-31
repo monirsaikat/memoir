@@ -1,0 +1,5 @@
+config.php
+storage/installed.lock
+uploads/*
+!uploads/.htaccess
+!uploads/index.html
