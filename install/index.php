@@ -169,7 +169,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-?><!doctype html>
+?>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -178,44 +179,364 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>Install Memoir</title>
 <link rel="icon" type="image/png" href="../assets/img/favicon.png">
 <style>
-:root{--bg:#f3f0e9;--card:#fff;--ink:#20221e;--muted:#72756d;--line:#dfdbd1;--accent:#6f4cf5;--good:#237653;--bad:#a63f42}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -12rem,#fff 0,transparent 42rem),var(--bg);color:var(--ink);font:14px/1.5 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{width:min(100% - 32px,960px);margin:42px auto}.brand{display:flex;align-items:center;gap:12px;margin:0 0 22px}.brand img{width:46px;height:46px;object-fit:contain}.brand strong{display:block;font-size:17px}.brand span{color:var(--muted);font-size:12px}.card{overflow:hidden;background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:24px;box-shadow:0 24px 70px rgba(42,35,20,.08)}.intro{padding:30px 32px 24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:20px}.eyebrow{text-transform:uppercase;letter-spacing:.13em;color:var(--accent);font-weight:800;font-size:10px}.intro h1{margin:5px 0 7px;font-size:30px;line-height:1.15;letter-spacing:-.045em}.intro p{margin:0;color:var(--muted);max-width:570px}.version{align-self:flex-start;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:11px;white-space:nowrap}.body{display:grid;grid-template-columns:250px minmax(0,1fr)}.checks{background:#faf9f6;border-right:1px solid var(--line);padding:25px 22px}.checks h2,.form h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:0 0 14px}.check{display:flex;gap:9px;align-items:flex-start;padding:8px 0;color:var(--muted);font-size:12px}.check b{width:19px;height:19px;display:grid;place-items:center;border-radius:50%;font-size:11px;flex:0 0 auto}.check.ok b{background:#e6f5ed;color:var(--good)}.check.bad{color:var(--bad)}.check.bad b{background:#fdebec}.checks small{display:block;color:var(--muted);margin-top:18px}.form{padding:28px 32px 32px}.section{margin-bottom:25px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.full{grid-column:1/-1}label{display:block;font-size:11px;font-weight:750;margin:0 0 6px}input,select{width:100%;height:43px;border:1px solid var(--line);border-radius:11px;padding:0 12px;background:#fff;color:var(--ink);font:inherit;outline:0}input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(111,76,245,.1)}.hint{display:block;color:var(--muted);font-size:10px;margin-top:5px}.alert{border-radius:11px;padding:11px 13px;margin-bottom:16px;font-size:12px}.alert.error{background:#fff0f0;color:#8e3437;border:1px solid #f0c7c7}.alert.notice{background:#fff8dd;color:#785f14;border:1px solid #eadb9b}.submit{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:4px}.submit span{color:var(--muted);font-size:11px}.btn{border:0;border-radius:11px;background:#22241f;color:#fff;padding:12px 18px;font-weight:750}.btn:disabled{opacity:.45;cursor:not-allowed}@media(max-width:760px){.shell{margin:20px auto}.intro{padding:24px}.body{grid-template-columns:1fr}.checks{border-right:0;border-bottom:1px solid var(--line)}.form{padding:24px}.grid{grid-template-columns:1fr}.full{grid-column:auto}.version{display:none}}
+:root {
+    --bg: #f3f0e9;
+    --card: #fff;
+    --ink: #20221e;
+    --muted: #72756d;
+    --line: #dfdbd1;
+    --accent: #6f4cf5;
+    --good: #237653;
+    --bad: #a63f42;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% -12rem, #fff 0, transparent 42rem), var(--bg);
+    color: var(--ink);
+    font: 14px/1.5 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.shell {
+    width: min(100% - 32px, 960px);
+    margin: 42px auto;
+}
+
+/* Brand row above the card */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 22px;
+}
+.brand img { width: 46px; height: 46px; object-fit: contain; }
+.brand strong { display: block; font-size: 17px; }
+.brand span { color: var(--muted); font-size: 12px; }
+
+.card {
+    overflow: hidden;
+    background: rgba(255, 255, 255, .96);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: 0 24px 70px rgba(42, 35, 20, .08);
+}
+
+/* Intro header */
+.intro {
+    padding: 30px 32px 24px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .13em;
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 10px;
+}
+.intro h1 {
+    margin: 5px 0 7px;
+    font-size: 30px;
+    line-height: 1.15;
+    letter-spacing: -.045em;
+}
+.intro p {
+    margin: 0;
+    color: var(--muted);
+    max-width: 570px;
+}
+.version {
+    align-self: flex-start;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: var(--muted);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* Two-column body: server checks + form */
+.body {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+}
+.checks {
+    background: #faf9f6;
+    border-right: 1px solid var(--line);
+    padding: 25px 22px;
+}
+.checks h2,
+.form h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    margin: 0 0 14px;
+}
+.check {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    padding: 8px 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+.check b {
+    width: 19px;
+    height: 19px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 11px;
+    flex: 0 0 auto;
+}
+.check.ok b { background: #e6f5ed; color: var(--good); }
+.check.bad { color: var(--bad); }
+.check.bad b { background: #fdebec; }
+.checks small {
+    display: block;
+    color: var(--muted);
+    margin-top: 18px;
+}
+
+/* Form fields */
+.form { padding: 28px 32px 32px; }
+.section { margin-bottom: 25px; }
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+.full { grid-column: 1 / -1; }
+
+label {
+    display: block;
+    font-size: 11px;
+    font-weight: 750;
+    margin: 0 0 6px;
+}
+input,
+select {
+    width: 100%;
+    height: 43px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 0 12px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    outline: 0;
+}
+input:focus,
+select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(111, 76, 245, .1);
+}
+.hint {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 5px;
+}
+
+/* Alerts */
+.alert {
+    border-radius: 11px;
+    padding: 11px 13px;
+    margin-bottom: 16px;
+    font-size: 12px;
+}
+.alert.error { background: #fff0f0; color: #8e3437; border: 1px solid #f0c7c7; }
+.alert.notice { background: #fff8dd; color: #785f14; border: 1px solid #eadb9b; }
+
+/* Submit row */
+.submit {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 4px;
+}
+.submit span { color: var(--muted); font-size: 11px; }
+.btn {
+    border: 0;
+    border-radius: 11px;
+    background: #22241f;
+    color: #fff;
+    padding: 12px 18px;
+    font-weight: 750;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+@media (max-width: 760px) {
+    .shell { margin: 20px auto; }
+    .intro { padding: 24px; }
+    .body { grid-template-columns: 1fr; }
+    .checks { border-right: 0; border-bottom: 1px solid var(--line); }
+    .form { padding: 24px; }
+    .grid { grid-template-columns: 1fr; }
+    .full { grid-column: auto; }
+    .version { display: none; }
+}
 </style>
 </head>
-<body><main class="shell">
-<div class="brand"><img src="../assets/img/memoir-logo.png" alt="Memoir logo"><div><strong>Memoir</strong><span>Private notes on your own server</span></div></div>
-<section class="card">
-<header class="intro"><div><div class="eyebrow">Quick setup</div><h1>Make this space yours.</h1><p>Connect a database, create the owner account, and Memoir will handle the tables and configuration.</p></div><span class="version">Version <?= installer_h($version) ?></span></header>
-<div class="body"><aside class="checks"><h2>Server checks</h2>
-<?php foreach ($checks as $label => $ok): ?><div class="check <?= $ok ? 'ok' : 'bad' ?>"><b><?= $ok ? '✓' : '!' ?></b><span><?= installer_h($label) ?></span></div><?php endforeach ?>
-<small>On cPanel, enable missing PHP extensions in Select PHP Version. Use 755 for folders in most setups.</small></aside>
-<div class="form">
-<?php if ($notice): ?><div class="alert notice"><?= installer_h($notice) ?></div><?php endif ?>
-<?php foreach ($errors as $error): ?><div class="alert error"><?= installer_h($error) ?></div><?php endforeach ?>
-<form method="post" autocomplete="off"><input type="hidden" name="_csrf" value="<?= installer_h($_SESSION['installer_csrf']) ?>">
-<div class="section"><h2>1 · Database</h2><div class="grid">
-<div><label for="db_host">Host</label><input id="db_host" name="db_host" value="<?= installer_value('db_host', 'localhost') ?>" required></div>
-<div><label for="db_port">Port</label><input id="db_port" name="db_port" inputmode="numeric" value="<?= installer_value('db_port', '3306') ?>" required></div>
-<div><label for="db_name">Database name</label><input id="db_name" name="db_name" value="<?= installer_value('db_name', 'memoir') ?>" required></div>
-<div><label for="db_user">Database user</label><input id="db_user" name="db_user" value="<?= installer_value('db_user') ?>" required></div>
-<div class="full"><label for="db_pass">Database password</label><input id="db_pass" type="password" name="db_pass" autocomplete="new-password"><span class="hint">Use the complete cPanel-prefixed database and username.</span></div>
-</div></div>
-<div class="section"><h2>2 · Site</h2><div class="grid">
-<div><label for="app_name">App name</label><input id="app_name" name="app_name" maxlength="120" value="<?= installer_value('app_name', 'Memoir') ?>"></div>
-<div><label for="timezone">Timezone</label><input id="timezone" name="timezone" value="<?= installer_value('timezone', 'UTC') ?>"></div>
-<div class="full"><label for="app_url">Application URL</label><input id="app_url" type="url" name="app_url" value="<?= installer_value('app_url', installer_default_url()) ?>" required><span class="hint">Do not include /install at the end.</span></div>
-</div></div>
-<div class="section"><h2>3 · Owner account</h2><div class="grid">
-<div><label for="admin_name">Your name</label><input id="admin_name" name="admin_name" maxlength="120" value="<?= installer_value('admin_name') ?>"></div>
-<div><label for="admin_email">Email</label><input id="admin_email" type="email" name="admin_email" autocomplete="username" value="<?= installer_value('admin_email') ?>" required></div>
-<div class="full"><label for="admin_pass">Password</label><input id="admin_pass" type="password" name="admin_pass" minlength="12" autocomplete="new-password" required><span class="hint">Use at least 12 characters and a password you do not reuse elsewhere.</span></div>
-</div></div>
-<div class="section"><h2>4 · Email (optional)</h2><div class="grid">
-<div><label for="smtp_host">SMTP host</label><input id="smtp_host" name="smtp_host" value="<?= installer_value('smtp_host') ?>" placeholder="mail.example.com"></div>
-<div><label for="smtp_port">SMTP port</label><input id="smtp_port" name="smtp_port" inputmode="numeric" value="<?= installer_value('smtp_port', '587') ?>"></div>
-<div><label for="smtp_security">Security</label><select id="smtp_security" name="smtp_security"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="none">None</option></select></div>
-<div><label for="smtp_user">SMTP username</label><input id="smtp_user" name="smtp_user" value="<?= installer_value('smtp_user') ?>"></div>
-<div><label for="smtp_pass">SMTP password</label><input id="smtp_pass" type="password" name="smtp_pass" autocomplete="new-password"></div>
-<div><label for="smtp_from">From email</label><input id="smtp_from" type="email" name="smtp_from" value="<?= installer_value('smtp_from') ?>"></div>
-</div></div>
-<div class="submit"><span>No data leaves your server during setup.</span><button class="btn" type="submit" <?= $requirementsMet ? '' : 'disabled' ?>>Install Memoir →</button></div>
-</form></div></div></section></main></body></html>
+<body>
+
+<main class="shell">
+    <div class="brand">
+        <img src="../assets/img/memoir-logo.png" alt="Memoir logo">
+        <div>
+            <strong>Memoir</strong>
+            <span>Private notes on your own server</span>
+        </div>
+    </div>
+
+    <section class="card">
+        <header class="intro">
+            <div>
+                <div class="eyebrow">Quick setup</div>
+                <h1>Make this space yours.</h1>
+                <p>Connect a database, create the owner account, and Memoir will handle the tables and configuration.</p>
+            </div>
+            <span class="version">Version <?= installer_h($version) ?></span>
+        </header>
+
+        <div class="body">
+            <aside class="checks">
+                <h2>Server checks</h2>
+                <?php foreach ($checks as $label => $ok): ?>
+                <div class="check <?= $ok ? 'ok' : 'bad' ?>">
+                    <b><?= $ok ? '✓' : '!' ?></b>
+                    <span><?= installer_h($label) ?></span>
+                </div>
+                <?php endforeach ?>
+                <small>On cPanel, enable missing PHP extensions in Select PHP Version. Use 755 for folders in most setups.</small>
+            </aside>
+
+            <div class="form">
+                <?php if ($notice): ?>
+                <div class="alert notice"><?= installer_h($notice) ?></div>
+                <?php endif ?>
+
+                <?php foreach ($errors as $error): ?>
+                <div class="alert error"><?= installer_h($error) ?></div>
+                <?php endforeach ?>
+
+                <form method="post" autocomplete="off">
+                    <input type="hidden" name="_csrf" value="<?= installer_h($_SESSION['installer_csrf']) ?>">
+
+                    <div class="section">
+                        <h2>1 · Database</h2>
+                        <div class="grid">
+                            <div>
+                                <label for="db_host">Host</label>
+                                <input id="db_host" name="db_host" value="<?= installer_value('db_host', 'localhost') ?>" required>
+                            </div>
+                            <div>
+                                <label for="db_port">Port</label>
+                                <input id="db_port" name="db_port" inputmode="numeric" value="<?= installer_value('db_port', '3306') ?>" required>
+                            </div>
+                            <div>
+                                <label for="db_name">Database name</label>
+                                <input id="db_name" name="db_name" value="<?= installer_value('db_name', 'memoir') ?>" required>
+                            </div>
+                            <div>
+                                <label for="db_user">Database user</label>
+                                <input id="db_user" name="db_user" value="<?= installer_value('db_user') ?>" required>
+                            </div>
+                            <div class="full">
+                                <label for="db_pass">Database password</label>
+                                <input id="db_pass" type="password" name="db_pass" autocomplete="new-password">
+                                <span class="hint">Use the complete cPanel-prefixed database and username.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>2 · Site</h2>
+                        <div class="grid">
+                            <div>
+                                <label for="app_name">App name</label>
+                                <input id="app_name" name="app_name" maxlength="120" value="<?= installer_value('app_name', 'Memoir') ?>">
+                            </div>
+                            <div>
+                                <label for="timezone">Timezone</label>
+                                <input id="timezone" name="timezone" value="<?= installer_value('timezone', 'UTC') ?>">
+                            </div>
+                            <div class="full">
+                                <label for="app_url">Application URL</label>
+                                <input id="app_url" type="url" name="app_url" value="<?= installer_value('app_url', installer_default_url()) ?>" required>
+                                <span class="hint">Do not include /install at the end.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>3 · Owner account</h2>
+                        <div class="grid">
+                            <div>
+                                <label for="admin_name">Your name</label>
+                                <input id="admin_name" name="admin_name" maxlength="120" value="<?= installer_value('admin_name') ?>">
+                            </div>
+                            <div>
+                                <label for="admin_email">Email</label>
+                                <input id="admin_email" type="email" name="admin_email" autocomplete="username" value="<?= installer_value('admin_email') ?>" required>
+                            </div>
+                            <div class="full">
+                                <label for="admin_pass">Password</label>
+                                <input id="admin_pass" type="password" name="admin_pass" minlength="12" autocomplete="new-password" required>
+                                <span class="hint">Use at least 12 characters and a password you do not reuse elsewhere.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>4 · Email (optional)</h2>
+                        <div class="grid">
+                            <div>
+                                <label for="smtp_host">SMTP host</label>
+                                <input id="smtp_host" name="smtp_host" value="<?= installer_value('smtp_host') ?>" placeholder="mail.example.com">
+                            </div>
+                            <div>
+                                <label for="smtp_port">SMTP port</label>
+                                <input id="smtp_port" name="smtp_port" inputmode="numeric" value="<?= installer_value('smtp_port', '587') ?>">
+                            </div>
+                            <div>
+                                <label for="smtp_security">Security</label>
+                                <select id="smtp_security" name="smtp_security">
+                                    <option value="tls">TLS</option>
+                                    <option value="ssl">SSL</option>
+                                    <option value="none">None</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="smtp_user">SMTP username</label>
+                                <input id="smtp_user" name="smtp_user" value="<?= installer_value('smtp_user') ?>">
+                            </div>
+                            <div>
+                                <label for="smtp_pass">SMTP password</label>
+                                <input id="smtp_pass" type="password" name="smtp_pass" autocomplete="new-password">
+                            </div>
+                            <div>
+                                <label for="smtp_from">From email</label>
+                                <input id="smtp_from" type="email" name="smtp_from" value="<?= installer_value('smtp_from') ?>">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="submit">
+                        <span>No data leaves your server during setup.</span>
+                        <button class="btn" type="submit" <?= $requirementsMet ? '' : 'disabled' ?>>Install Memoir →</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+</main>
+
+</body>
+</html>
