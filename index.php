@@ -103,6 +103,7 @@ function note_preview(string $content): string {
 
         <button class="new-note-btn" id="newNote"><i class="fa-solid fa-plus"></i> New note</button>
 
+        <div class="sidebar-scroll">
         <nav class="main-nav">
             <button class="nav-item active" data-folder="">
                 <i class="fa-regular fa-note-sticky"></i>
@@ -145,6 +146,7 @@ function note_preview(string $content): string {
             <?php foreach ($tagCounts as $tag => $count): ?>
             <button class="tag-item" data-tag="<?= e($tag) ?>">#<?= e($tag) ?><span class="count"><?= $count ?></span></button>
             <?php endforeach ?>
+        </div>
         </div>
 
         <div class="sidebar-bottom">
