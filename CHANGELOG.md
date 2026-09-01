@@ -3,6 +3,23 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] - 2026-09-01
+
+### Added
+
+- Progressive Web App: a web manifest and a conservative service worker make
+  Memoir installable on phones and desktops. Static assets and CDN libraries
+  are cached stale-while-revalidate; pages and the API always hit the
+  network, so note data is never cached.
+- Public share links: a share button in the editor creates a revocable
+  read-only link for a single note — no account needed to view. Tokens are
+  unguessable, unique, excluded from search engines, and the public page
+  renders the sanitized note with code highlighting.
+- Markdown import: Settings → Data imports .md/.txt files (each becomes a
+  note) through a built-in Markdown converter covering headings, lists, task
+  lists, code blocks, quotes, links, images, and inline formatting — titles
+  come from the first `#` heading or the file name.
+
 ## [1.5.0] - 2026-09-01
 
 ### Added
@@ -161,6 +178,7 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
+[1.6.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.6.0
 [1.5.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.5.0
 [1.4.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.4.0
 [1.3.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.3.0

@@ -68,6 +68,8 @@ function note_preview(string $content): string {
     })();
     </script>
     <link rel="icon" type="image/png" href="assets/img/favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6f5ee8">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -247,6 +249,7 @@ function note_preview(string $content): string {
                     <span id="saveStatus">Saved</span>
                 </div>
                 <div class="editor-actions">
+                    <button class="icon-btn" id="shareNote" title="Share note"><i class="fa-solid fa-share-nodes"></i></button>
                     <button class="icon-btn" id="pinNote" title="Pin"><i class="fa-solid fa-thumbtack"></i></button>
                     <button class="icon-btn" id="noteStyle" title="Note style"><i class="fa-solid fa-palette"></i></button>
                     <button class="icon-btn danger" id="deleteNote" title="Delete"><i class="fa-regular fa-trash-can"></i></button>
@@ -378,6 +381,22 @@ function note_preview(string $content): string {
     </div>
 </div>
 
+<!-- Popover: share this note -->
+<div class="mini-menu share-menu hidden" id="shareMenu">
+    <div id="shareOff">
+        <p class="share-hint">Create a read-only link anyone can open — no account needed. You can revoke it at any time.</p>
+        <button type="button" class="primary-btn share-full" id="shareEnable">Create share link</button>
+    </div>
+    <div id="shareOn" class="hidden">
+        <p class="share-hint">Anyone with this link can view the note.</p>
+        <input id="shareUrl" readonly spellcheck="false">
+        <div class="share-actions">
+            <button type="button" id="copyShare"><i class="fa-regular fa-copy"></i> Copy link</button>
+            <button type="button" id="shareDisable" class="danger">Stop sharing</button>
+        </div>
+    </div>
+</div>
+
 <!-- Popover: wiki-link suggestions while typing [[ -->
 <div class="mini-menu hidden" id="wikiMenu" role="menu"></div>
 
@@ -463,6 +482,7 @@ function note_preview(string $content): string {
                 <button type="button" data-pane="general"><i class="fa-solid fa-sliders"></i> General</button>
                 <button type="button" data-pane="email"><i class="fa-solid fa-envelope"></i> Email</button>
                 <button type="button" data-pane="account"><i class="fa-solid fa-user-shield"></i> Account</button>
+                <button type="button" data-pane="data"><i class="fa-solid fa-file-import"></i> Data</button>
                 <div class="settings-nav-foot">Memoir v<?= e(MEMOIR_VERSION) ?></div>
             </nav>
 
@@ -572,6 +592,16 @@ function note_preview(string $content): string {
                         <button type="button" class="primary-btn" id="changePassword">Update password</button>
                     </div>
                 </section>
+
+                <section class="settings-panel hidden" data-panel="data">
+                    <h4>Import notes</h4>
+                    <p class="settings-hint">Import Markdown (.md) or plain-text files — each file becomes a note. Headings, lists, task lists, code blocks, and links are preserved. Up to 50 files, 1&nbsp;MB each.</p>
+                    <input type="file" id="importFiles" multiple accept=".md,.markdown,.txt" hidden>
+                    <div class="pw-actions">
+                        <span id="importStatus" class="pw-status"></span>
+                        <button type="button" class="primary-btn" id="importBtn">Choose files…</button>
+                    </div>
+                </section>
             </div>
         </div>
 
@@ -629,5 +659,10 @@ function note_preview(string $content): string {
 <script>window.MEMOIR = {csrf: document.querySelector('meta[name="csrf-token"]').content};</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="<?= asset('assets/js/app.js') ?>"></script>
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+}
+</script>
 </body>
 </html>

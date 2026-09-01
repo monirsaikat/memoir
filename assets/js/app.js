@@ -92,6 +92,7 @@
     $('#crumbFolder').textContent = current.folder_name || 'Unfiled';
     $('#updatedAt').textContent = `Updated ${fmtDate(current.updated_at)}`;
     $('#pinNote').classList.toggle('active', current.is_pinned == 1);
+    $('#shareNote').classList.toggle('active', !!current.share_token);
     currentTags = (current.tags || '').split(',').filter(Boolean);
     renderTagChips();
     setEditorReadOnly(!!current.deleted_at);
@@ -1468,6 +1469,7 @@
     folderPicker.classList.add('hidden');
     $('#sortMenu').classList.add('hidden');
     $('#wikiMenu').classList.add('hidden');
+    $('#shareMenu').classList.add('hidden');
   }
 
   function openMiniMenu(menu, anchor) {
@@ -1560,7 +1562,7 @@
   });
 
   document.addEventListener('pointerdown', e => {
-    if (e.target.closest('#folderMenu, #folderPicker, .folder-menu-btn, #crumbFolder, #sortMenu, #sortBtn')) return;
+    if (e.target.closest('#folderMenu, #folderPicker, .folder-menu-btn, #crumbFolder, #sortMenu, #sortBtn, #shareMenu, #shareNote')) return;
     closeMiniMenus();
   });
 
@@ -1775,6 +1777,92 @@
   $('#backlinkList').addEventListener('click', e => {
     const btn = e.target.closest('button[data-id]');
     if (btn) loadNote(btn.dataset.id);
+  });
+
+  // ---------------------------------------------------------------------
+  // Public share links
+  // ---------------------------------------------------------------------
+
+  const shareMenu = $('#shareMenu');
+
+  function shareUrlFor(token) {
+    return new URL(`share.php?t=${token}`, location.href).href;
+  }
+
+  function renderShareMenu() {
+    const shared = !!current?.share_token;
+    $('#shareOff').classList.toggle('hidden', shared);
+    $('#shareOn').classList.toggle('hidden', !shared);
+    if (shared) $('#shareUrl').value = shareUrlFor(current.share_token);
+    $('#shareNote').classList.toggle('active', shared);
+  }
+
+  $('#shareNote').onclick = e => {
+    if (!current || current.deleted_at) return;
+    if (!shareMenu.classList.contains('hidden')) {
+      shareMenu.classList.add('hidden');
+      return;
+    }
+    renderShareMenu();
+    openMiniMenu(shareMenu, e.currentTarget);
+  };
+
+  $('#shareEnable').onclick = async () => {
+    if (!current) return;
+    const d = await api('share-note', { method: 'POST', body: JSON.stringify({ id: current.id, enable: true }) });
+    current.share_token = d.token;
+    renderShareMenu();
+  };
+
+  $('#shareDisable').onclick = async () => {
+    if (!current) return;
+    await api('share-note', { method: 'POST', body: JSON.stringify({ id: current.id, enable: false }) });
+    current.share_token = null;
+    renderShareMenu();
+    shareMenu.classList.add('hidden');
+  };
+
+  $('#copyShare').onclick = async () => {
+    const input = $('#shareUrl');
+    try {
+      await navigator.clipboard.writeText(input.value);
+    } catch {
+      input.select();
+      document.execCommand('copy');
+    }
+    const btn = $('#copyShare');
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+    setTimeout(() => {
+      btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy link';
+    }, 1400);
+  };
+
+  // ---------------------------------------------------------------------
+  // Import (Settings → Data)
+  // ---------------------------------------------------------------------
+
+  $('#importBtn').onclick = () => $('#importFiles').click();
+
+  $('#importFiles').addEventListener('change', async e => {
+    const files = [...e.target.files];
+    if (!files.length) return;
+    const status = $('#importStatus');
+    status.className = 'pw-status';
+    status.textContent = `Importing ${files.length} file${files.length > 1 ? 's' : ''}…`;
+    const fd = new FormData();
+    files.forEach(f => fd.append('files[]', f));
+    try {
+      const d = await api('import', { method: 'POST', body: fd });
+      status.className = 'pw-status ok';
+      status.textContent = `Imported ${d.imported} note${d.imported === 1 ? '' : 's'}`
+        + (d.skipped ? ` (${d.skipped} skipped)` : '') + '.';
+      await refreshList();
+      refreshSidebar();
+    } catch (err) {
+      status.className = 'pw-status error';
+      status.textContent = err.message;
+    }
+    e.target.value = '';
   });
 
   // Note appearance modal

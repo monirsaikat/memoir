@@ -1,0 +1,14 @@
+{
+    "name": "Memoir",
+    "short_name": "Memoir",
+    "description": "Self-hosted personal notes",
+    "start_url": "./index.php",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#f4f1ea",
+    "theme_color": "#6f5ee8",
+    "icons": [
+        { "src": "assets/img/favicon.png", "sizes": "64x64", "type": "image/png" },
+        { "src": "assets/img/memoir-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    ]
+}

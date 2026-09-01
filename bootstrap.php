@@ -111,11 +111,111 @@ function ensure_schema(): void {
         if (!db()->query("SHOW INDEX FROM notes WHERE Key_name = 'ft_search'")->fetch()) {
             db()->exec("ALTER TABLE notes ADD FULLTEXT ft_search (title, content, tags)");
         }
+        if (!db()->query("SHOW COLUMNS FROM notes LIKE 'share_token'")->fetch()) {
+            db()->exec("ALTER TABLE notes ADD COLUMN share_token VARCHAR(64) NULL, ADD UNIQUE INDEX uq_share (share_token)");
+        }
         // Trashed notes are purged for good after 30 days.
         db()->exec("DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)");
     } catch (Throwable) {
         // Fresh installs get the columns from the installer schema.
     }
+}
+
+// Convert the subset of Markdown the editor understands into note HTML.
+// The result is passed through sanitize_note_html by the caller.
+function markdown_to_note_html(string $md): string {
+    $inline = function (string $text): string {
+        $text = htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $text = preg_replace('/`([^`]+)`/', '<code>$1</code>', $text);
+        $text = preg_replace('/!\[([^\]]*)\]\(([^)\s]+)\)/', '<img src="$2" alt="$1">', $text);
+        $text = preg_replace('/\[([^\]]+)\]\(([^)\s]+)\)/', '<a href="$2">$1</a>', $text);
+        $text = preg_replace('/\*\*([^*]+)\*\*/', '<strong>$1</strong>', $text);
+        $text = preg_replace('/(?<!\*)\*([^*\s][^*]*)\*(?!\*)/', '<em>$1</em>', $text);
+        $text = preg_replace('/~~([^~]+)~~/', '<s>$1</s>', $text);
+        return $text;
+    };
+
+    $html = '';
+    $list = null;        // 'ul' | 'ol' | 'checklist' while inside a list
+    $inCode = false;
+    $code = [];
+    $closeList = function () use (&$html, &$list): void {
+        if ($list) {
+            $html .= $list === 'ol' ? '</ol>' : '</ul>';
+            $list = null;
+        }
+    };
+
+    foreach (preg_split('/\r\n|\r|\n/', $md) as $line) {
+        if ($inCode) {
+            if (preg_match('/^\s*```/', $line)) {
+                $html .= '<pre>' . htmlspecialchars(implode("\n", $code), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>';
+                $inCode = false;
+                $code = [];
+            } else {
+                $code[] = $line;
+            }
+            continue;
+        }
+        if (preg_match('/^\s*```/', $line)) {
+            $closeList();
+            $inCode = true;
+            continue;
+        }
+        if (preg_match('/^(#{1,6})\s+(.*)$/', $line, $m)) {
+            $closeList();
+            $level = strlen($m[1]);
+            $html .= "<h$level>" . $inline($m[2]) . "</h$level>";
+            continue;
+        }
+        if (preg_match('/^\s*(-{3,}|\*{3,})\s*$/', $line)) {
+            $closeList();
+            $html .= '<hr>';
+            continue;
+        }
+        if (preg_match('/^>\s?(.*)$/', $line, $m)) {
+            $closeList();
+            $html .= '<blockquote>' . $inline($m[1]) . '</blockquote>';
+            continue;
+        }
+        if (preg_match('/^\s*[-*]\s+\[([ xX])\]\s+(.*)$/', $line, $m)) {
+            if ($list !== 'checklist') {
+                $closeList();
+                $html .= '<ul class="checklist">';
+                $list = 'checklist';
+            }
+            $checked = strtolower($m[1]) === 'x' ? '1' : '0';
+            $html .= '<li data-checked="' . $checked . '">' . $inline($m[2]) . '</li>';
+            continue;
+        }
+        if (preg_match('/^\s*[-*]\s+(.*)$/', $line, $m)) {
+            if ($list !== 'ul') {
+                $closeList();
+                $html .= '<ul>';
+                $list = 'ul';
+            }
+            $html .= '<li>' . $inline($m[1]) . '</li>';
+            continue;
+        }
+        if (preg_match('/^\s*\d+\.\s+(.*)$/', $line, $m)) {
+            if ($list !== 'ol') {
+                $closeList();
+                $html .= '<ol>';
+                $list = 'ol';
+            }
+            $html .= '<li>' . $inline($m[1]) . '</li>';
+            continue;
+        }
+        $closeList();
+        if (trim($line) !== '') {
+            $html .= '<p>' . $inline($line) . '</p>';
+        }
+    }
+    if ($inCode && $code) {
+        $html .= '<pre>' . htmlspecialchars(implode("\n", $code), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>';
+    }
+    $closeList();
+    return $html;
 }
 
 // Minimal SMTP client for transactional mail (password resets). Uses the

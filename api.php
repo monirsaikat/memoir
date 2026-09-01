@@ -302,6 +302,70 @@ case 'sidebar':
         'trash' => (int) db()->query("SELECT COUNT(*) FROM notes WHERE deleted_at IS NOT NULL")->fetchColumn(),
     ]);
 
+case 'share-note':
+    require_method('POST');
+    $data = request_json();
+    $id = (int) ($data['id'] ?? 0);
+    if (!$id) {
+        json_response(['ok' => false, 'message' => 'Unknown note'], 422);
+    }
+
+    if (!empty($data['enable'])) {
+        $token = bin2hex(random_bytes(24));
+        $stmt = db()->prepare("UPDATE notes SET share_token = ? WHERE id = ? AND deleted_at IS NULL");
+        $stmt->execute([$token, $id]);
+        if (!$stmt->rowCount()) {
+            json_response(['ok' => false, 'message' => 'Note not found'], 404);
+        }
+        global $config;
+        json_response([
+            'ok' => true,
+            'token' => $token,
+            'url' => rtrim($config['app']['url'], '/') . '/share.php?t=' . $token,
+        ]);
+    }
+
+    db()->prepare("UPDATE notes SET share_token = NULL WHERE id = ?")->execute([$id]);
+    json_response(['ok' => true]);
+
+case 'import':
+    require_method('POST');
+    if (empty($_FILES['files'])) {
+        json_response(['ok' => false, 'message' => 'No files received'], 422);
+    }
+
+    $names = (array) $_FILES['files']['name'];
+    $tmpNames = (array) $_FILES['files']['tmp_name'];
+    $errors = (array) $_FILES['files']['error'];
+    $sizes = (array) $_FILES['files']['size'];
+    $imported = 0;
+    $skipped = 0;
+
+    foreach (array_slice(array_keys($names), 0, 50) as $i) {
+        $ext = strtolower(pathinfo($names[$i], PATHINFO_EXTENSION));
+        if ($errors[$i] !== UPLOAD_ERR_OK
+            || $sizes[$i] > 1024 * 1024
+            || !in_array($ext, ['md', 'markdown', 'txt'], true)) {
+            $skipped++;
+            continue;
+        }
+        $raw = (string) file_get_contents($tmpNames[$i]);
+
+        // Title: the first "# " heading if present, else the file name.
+        $title = pathinfo($names[$i], PATHINFO_FILENAME);
+        if (preg_match('/^#\s+(.+?)\s*$/m', $raw, $m)) {
+            $title = $m[1];
+            $raw = preg_replace('/^#\s+.+?$\R?/m', '', $raw, 1);
+        }
+        $title = mb_substr(trim($title) ?: 'Imported note', 0, 255);
+
+        $content = sanitize_note_html(markdown_to_note_html($raw));
+        db()->prepare("INSERT INTO notes(title, content) VALUES(?, ?)")->execute([$title, $content]);
+        $imported++;
+    }
+
+    json_response(['ok' => true, 'imported' => $imported, 'skipped' => $skipped]);
+
 case 'upload':
     require_method('POST');
 
