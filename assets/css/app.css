@@ -2050,6 +2050,147 @@ html[data-theme="midnight"] .auth-page { background: radial-gradient(circle at 5
 html[data-theme="midnight"] .auth-card { background: #0b0b0b; border-color: #232323; }
 html[data-theme="midnight"] .auth-card input { background: #050505; border-color: #232323; }
 
+/* Forest: deep green workspace (dark base) */
+html[data-theme="forest"] {
+    --bg: #18221d;
+    --panel: #1f2d25;
+    --panel2: #24352c;
+    --ink: #e4efe7;
+    --muted: #9cb2a4;
+    --line: #32463b;
+}
+html[data-theme="forest"] .sidebar { background: #1c2a22; border-right-color: #2a3d33; }
+html[data-theme="forest"] .sidebar-bottom { border-top-color: #2a3d33; }
+html[data-theme="forest"] .note-list-panel { background: #1d2c24; }
+html[data-theme="forest"] .search-wrap input { background: #24352c; border-color: #32463b; }
+html[data-theme="forest"] .search-wrap kbd { background: #2b3f34; border-color: #3a5245; color: #8fa99a; }
+html[data-theme="forest"] .note-card { background: #24352c; border-color: #31463b; }
+html[data-theme="forest"] .note-card:hover,
+html[data-theme="forest"] .note-card.active { background: #2b3f34; border-color: #3f5b4d; }
+html[data-theme="forest"] .editor-head,
+html[data-theme="forest"] .toolbar,
+html[data-theme="forest"] .editor-foot { border-color: #2a3d33; }
+html[data-theme="forest"] .icon-btn { background: #24352c; border-color: #32463b; }
+html[data-theme="forest"] .icon-btn:hover { background: #2b3f34; }
+html[data-theme="forest"] .rich-editor pre { background: #1c2a22; border-color: #32463b; }
+html[data-theme="forest"] .rich-editor code { background: #2b3f34; }
+html[data-theme="forest"] .rich-editor table,
+html[data-theme="forest"] .rich-editor th,
+html[data-theme="forest"] .rich-editor td { border-color: #32463b; }
+html[data-theme="forest"] .rich-editor th { background: #24352c; }
+html[data-theme="forest"] .rich-editor ul.checklist li:before { background: #1f2d25; border-color: #476556; }
+html[data-theme="forest"] .modal,
+html[data-theme="forest"] .color-sheet,
+html[data-theme="forest"] .heading-sheet { background: #24352c; border-color: #3a5245; }
+html[data-theme="forest"] .modal input,
+html[data-theme="forest"] .modal select { background: #1c2a22; border-color: #32463b; }
+html[data-theme="forest"] .modal-actions button { background: #2b3f34; border-color: #3a5245; }
+html[data-theme="forest"] .icon-grid button { background: #1c2a22; border-color: #32463b; }
+html[data-theme="forest"] .swatch-clear { background: #2b3f34; border-color: #3a5245; color: #9cb2a4; }
+html[data-theme="forest"] .settings-nav { background: #1c2a22; }
+html[data-theme="forest"] .format-bubble,
+html[data-theme="forest"] .table-menu { background: #344b3f; }
+html[data-theme="forest"] .rich-editor,
+html[data-theme="forest"] .note-list { scrollbar-color: #446253 transparent; }
+html[data-theme="forest"] .rich-editor::-webkit-scrollbar-thumb,
+html[data-theme="forest"] .note-list::-webkit-scrollbar-thumb { background: #446253; }
+html[data-theme="forest"] .auth-page { background: radial-gradient(circle at 50% -10%, #24352c 0, transparent 36rem), var(--bg); }
+html[data-theme="forest"] .auth-card { background: #1c2a22; border-color: #32463b; }
+html[data-theme="forest"] .auth-card input { background: #18221d; border-color: #32463b; }
+
+/* Dusk: violet twilight (dark base) */
+html[data-theme="dusk"] {
+    --bg: #232036;
+    --panel: #2e2a44;
+    --panel2: #353052;
+    --ink: #ebe9f6;
+    --muted: #a6a2c2;
+    --line: #454068;
+}
+html[data-theme="dusk"] .sidebar { background: #29243d; border-right-color: #3a3558; }
+html[data-theme="dusk"] .sidebar-bottom { border-top-color: #3a3558; }
+html[data-theme="dusk"] .note-list-panel { background: #2a2540; }
+html[data-theme="dusk"] .search-wrap input { background: #353052; border-color: #454068; }
+html[data-theme="dusk"] .search-wrap kbd { background: #3d3860; border-color: #514b78; color: #9c97bc; }
+html[data-theme="dusk"] .note-card { background: #342f50; border-color: #433e65; }
+html[data-theme="dusk"] .note-card:hover,
+html[data-theme="dusk"] .note-card.active { background: #3c3760; border-color: #575180; }
+html[data-theme="dusk"] .editor-head,
+html[data-theme="dusk"] .toolbar,
+html[data-theme="dusk"] .editor-foot { border-color: #3a3558; }
+html[data-theme="dusk"] .icon-btn { background: #353052; border-color: #454068; }
+html[data-theme="dusk"] .icon-btn:hover { background: #3d3860; }
+html[data-theme="dusk"] .rich-editor pre { background: #29243d; border-color: #454068; }
+html[data-theme="dusk"] .rich-editor code { background: #3d3860; }
+html[data-theme="dusk"] .rich-editor table,
+html[data-theme="dusk"] .rich-editor th,
+html[data-theme="dusk"] .rich-editor td { border-color: #454068; }
+html[data-theme="dusk"] .rich-editor th { background: #353052; }
+html[data-theme="dusk"] .rich-editor ul.checklist li:before { background: #2e2a44; border-color: #5f588b; }
+html[data-theme="dusk"] .modal,
+html[data-theme="dusk"] .color-sheet,
+html[data-theme="dusk"] .heading-sheet { background: #353052; border-color: #514b78; }
+html[data-theme="dusk"] .modal input,
+html[data-theme="dusk"] .modal select { background: #29243d; border-color: #454068; }
+html[data-theme="dusk"] .modal-actions button { background: #3d3860; border-color: #514b78; }
+html[data-theme="dusk"] .icon-grid button { background: #29243d; border-color: #454068; }
+html[data-theme="dusk"] .swatch-clear { background: #3d3860; border-color: #514b78; color: #a6a2c2; }
+html[data-theme="dusk"] .settings-nav { background: #29243d; }
+html[data-theme="dusk"] .format-bubble,
+html[data-theme="dusk"] .table-menu { background: #484370; }
+html[data-theme="dusk"] .rich-editor,
+html[data-theme="dusk"] .note-list { scrollbar-color: #5a5487 transparent; }
+html[data-theme="dusk"] .rich-editor::-webkit-scrollbar-thumb,
+html[data-theme="dusk"] .note-list::-webkit-scrollbar-thumb { background: #5a5487; }
+html[data-theme="dusk"] .auth-page { background: radial-gradient(circle at 50% -10%, #353052 0, transparent 36rem), var(--bg); }
+html[data-theme="dusk"] .auth-card { background: #29243d; border-color: #454068; }
+html[data-theme="dusk"] .auth-card input { background: #232036; border-color: #454068; }
+
+/* Paper: clean high-contrast notebook (light base) */
+html[data-theme="paper"] {
+    --bg: #f4efdf;
+    --panel: #fcf8ec;
+    --panel2: #f7f1e2;
+    --ink: #2e2a1f;
+    --muted: #7d7768;
+    --line: #d8cfbb;
+}
+html[data-theme="paper"] .sidebar { background: #efe6d2; border-right-color: #d1c5ac; }
+html[data-theme="paper"] .sidebar-bottom { border-top-color: #d1c5ac; }
+html[data-theme="paper"] .primary-btn { background: #2e2a1f !important; }
+html[data-theme="paper"] .note-list-panel { background: #f7f1e2; }
+html[data-theme="paper"] .search-wrap input { background: #fcf8ec; }
+html[data-theme="paper"] .search-wrap kbd { background: #efe7d4; border-color: #d8cfbb; }
+html[data-theme="paper"] .note-card { background: rgba(255, 252, 243, .75); border-color: #d6cbb3; }
+html[data-theme="paper"] .note-card:hover,
+html[data-theme="paper"] .note-card.active { background: #fffbf0; border-color: #cdbf9f; }
+html[data-theme="paper"] .editor-panel { background: #fcf8ec; }
+html[data-theme="paper"] .editor-head,
+html[data-theme="paper"] .toolbar,
+html[data-theme="paper"] .editor-foot { border-color: #dfd4be; }
+html[data-theme="paper"] .icon-btn { background: #fcf8ec; }
+html[data-theme="paper"] .icon-btn:hover { background: #f2ead7; }
+html[data-theme="paper"] .toolbar button:hover { background: #efe7d2; }
+html[data-theme="paper"] .rich-editor pre { background: #f3ebd8; border-color: #d8cfbb; }
+html[data-theme="paper"] .rich-editor code { background: #ebe0c7; }
+html[data-theme="paper"] .rich-editor img { border-color: #d8cfbb; }
+html[data-theme="paper"] .modal,
+html[data-theme="paper"] .color-sheet,
+html[data-theme="paper"] .heading-sheet { background: #fcf8ec; border-color: #d1c5ac; }
+html[data-theme="paper"] .modal input,
+html[data-theme="paper"] .modal select { background: #fffdf5; }
+html[data-theme="paper"] .modal-actions button { background: #f7f1e2; border-color: #d8cfbb; }
+html[data-theme="paper"] .icon-grid button { background: #fffdf5; }
+html[data-theme="paper"] .swatch-clear { background: #f7f1e2; border-color: #d8cfbb; }
+html[data-theme="paper"] .rich-editor,
+html[data-theme="paper"] .note-list { scrollbar-color: #cabd9f transparent; }
+html[data-theme="paper"] .rich-editor::-webkit-scrollbar-thumb,
+html[data-theme="paper"] .note-list::-webkit-scrollbar-thumb { background: #cabd9f; }
+html[data-theme="paper"] .rich-editor ul.checklist li:before { background: #fffdf5; border-color: #b7aa87; }
+html[data-theme="paper"] .auth-page { background: radial-gradient(circle at 50% -10%, #fcf8ec 0, transparent 36rem), var(--bg); }
+html[data-theme="paper"] .auth-card { background: #fcf8ec; border-color: #d1c5ac; }
+html[data-theme="paper"] .auth-card input { background: #fffdf5; border-color: #d8cfbb; }
+
 /* Flavor preview thumbs */
 .thumb-sepia { background: #efe6d1; }
 .thumb-sepia .tt-side { background: #ddcfad; }
@@ -2060,6 +2201,15 @@ html[data-theme="midnight"] .auth-card input { background: #050505; border-color
 .thumb-midnight { background: #000; }
 .thumb-midnight .tt-side { background: #141414; }
 .thumb-midnight .tt-main span + span { background: #262626; width: 90%; }
+.thumb-forest { background: #1f2d25; }
+.thumb-forest .tt-side { background: #2d4738; }
+.thumb-forest .tt-main span + span { background: #3e5d4a; width: 90%; }
+.thumb-dusk { background: #2e2a44; }
+.thumb-dusk .tt-side { background: #453b66; }
+.thumb-dusk .tt-main span + span { background: #5b4f82; width: 90%; }
+.thumb-paper { background: #f8f3e6; }
+.thumb-paper .tt-side { background: #e8dcc4; }
+.thumb-paper .tt-main span + span { background: #d9ccb2; width: 90%; }
 
 /* ==========================================================================
    Bulk selection & modern accent pills
