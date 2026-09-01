@@ -69,6 +69,8 @@ All notable changes to Memoir are documented here. This project follows
 
 ### Fixed
 
+- Text colors and highlights survive saving: browsers normalize inline styles
+  to `rgb()` form, which the sanitizer's hex-only whitelist silently stripped.
 - Markdown block conversion no longer formats the wrong line: deleting a typed
   marker could leave an empty block that silently snapped the caret to the
   previous line before the format was applied.
