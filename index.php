@@ -2,6 +2,7 @@
 require __DIR__ . '/bootstrap.php';
 
 $user = require_auth();
+ensure_schema();
 
 $settings = db()->query("SELECT * FROM settings WHERE id=1")->fetch();
 
@@ -18,6 +19,14 @@ $notes = db()->query(
      ORDER BY n.is_pinned DESC, n.updated_at DESC
      LIMIT 100"
 )->fetchAll();
+
+$tagCounts = [];
+foreach (db()->query("SELECT tags FROM notes WHERE tags <> ''")->fetchAll() as $row) {
+    foreach (explode(',', $row['tags']) as $tag) {
+        $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
+    }
+}
+ksort($tagCounts, SORT_NATURAL | SORT_FLAG_CASE);
 
 $folderIcons = ['fa-folder', 'fa-code', 'fa-server', 'fa-briefcase', 'fa-lightbulb', 'fa-book', 'fa-heart', 'fa-star', 'fa-globe', 'fa-terminal'];
 $noteIcons = ['fa-note-sticky', 'fa-code', 'fa-terminal', 'fa-lightbulb', 'fa-book', 'fa-heart', 'fa-star', 'fa-server', 'fa-list-check', 'fa-wand-magic-sparkles'];
@@ -41,7 +50,7 @@ function note_preview(string $content): string {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="<?= asset('assets/css/app.css') ?>">
 </head>
 <body>
 
@@ -83,6 +92,13 @@ function note_preview(string $content): string {
                 <span><?= e($folder['name']) ?></span>
                 <span class="count"><?= $folder['note_count'] ?></span>
             </button>
+            <?php endforeach ?>
+        </div>
+
+        <div class="section-title" id="tagSectionTitle" <?= $tagCounts ? '' : 'hidden' ?>><span>Tags</span></div>
+        <div id="tagList" class="tag-list">
+            <?php foreach ($tagCounts as $tag => $count): ?>
+            <button class="tag-item" data-tag="<?= e($tag) ?>">#<?= e($tag) ?><span class="count"><?= $count ?></span></button>
             <?php endforeach ?>
         </div>
 
@@ -139,7 +155,7 @@ function note_preview(string $content): string {
                 <strong><?= e($note['title']) ?></strong>
                 <p><?= e(note_preview($note['content'])) ?></p>
                 <div class="note-meta">
-                    <span><?= e($note['folder_name'] ?? 'Unfiled') ?></span>
+                    <span><?= e($note['folder_name'] ?? 'Unfiled') ?><?= ($note['tags'] ?? '') !== '' ? ' · #' . e(str_replace(',', ' #', $note['tags'])) : '' ?></span>
                     <time><?= date('M j', strtotime($note['updated_at'])) ?></time>
                 </div>
             </button>
@@ -175,22 +191,61 @@ function note_preview(string $content): string {
             <div class="editor-body">
                 <input id="noteTitle" class="title-input" value="" placeholder="Untitled note">
 
-                <div class="toolbar">
-                    <button data-cmd="bold"><i class="fa-solid fa-bold"></i></button>
-                    <button data-cmd="italic"><i class="fa-solid fa-italic"></i></button>
-                    <button data-cmd="underline"><i class="fa-solid fa-underline"></i></button>
-                    <span></span>
-                    <button data-block="h2">H2</button>
-                    <button data-block="h3">H3</button>
-                    <span></span>
-                    <button data-cmd="insertUnorderedList"><i class="fa-solid fa-list-ul"></i></button>
-                    <button data-cmd="insertOrderedList"><i class="fa-solid fa-list-ol"></i></button>
-                    <button data-cmd="formatBlock" data-value="blockquote"><i class="fa-solid fa-quote-left"></i></button>
-                    <button data-cmd="formatBlock" data-value="pre"><i class="fa-solid fa-code"></i></button>
-                    <span></span>
-                    <button id="insertLink"><i class="fa-solid fa-link"></i></button>
-                    <button id="insertImage"><i class="fa-regular fa-image"></i></button>
-                    <input type="file" id="imageInput" accept="image/*" hidden>
+                <div class="tag-row">
+                    <i class="fa-solid fa-tag"></i>
+                    <div class="tag-chips" id="tagChips"></div>
+                    <input id="tagInput" placeholder="Add tag" maxlength="30" autocomplete="off">
+                </div>
+
+                <div class="toolbar-wrap">
+                    <div class="toolbar">
+                        <div class="tool-group">
+                            <button type="button" data-cmd="undo" title="Undo (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+                            <button type="button" data-cmd="redo" title="Redo (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                        <span class="tool-sep"></span>
+                        <div class="tool-group">
+                            <button type="button" data-cmd="bold" data-state="bold" title="Bold (Ctrl+B or **text**)"><i class="fa-solid fa-bold"></i></button>
+                            <button type="button" data-cmd="italic" data-state="italic" title="Italic (Ctrl+I or *text*)"><i class="fa-solid fa-italic"></i></button>
+                            <button type="button" data-cmd="underline" data-state="underline" title="Underline (Ctrl+U)"><i class="fa-solid fa-underline"></i></button>
+                            <button type="button" data-cmd="strikeThrough" data-state="strikeThrough" title="Strikethrough (~~text~~)"><i class="fa-solid fa-strikethrough"></i></button>
+                        </div>
+                        <span class="tool-sep"></span>
+                        <div class="tool-group">
+                            <button type="button" class="tool-label" data-block="h2" title="Heading (# + space)">H2</button>
+                            <button type="button" class="tool-label" data-block="h3" title="Subheading (## + space)">H3</button>
+                        </div>
+                        <span class="tool-sep"></span>
+                        <div class="tool-group">
+                            <button type="button" data-cmd="insertUnorderedList" data-state="insertUnorderedList" title="Bullet list (- + space)"><i class="fa-solid fa-list-ul"></i></button>
+                            <button type="button" data-cmd="insertOrderedList" data-state="insertOrderedList" title="Numbered list (1. + space)"><i class="fa-solid fa-list-ol"></i></button>
+                            <button type="button" data-cmd="formatBlock" data-value="blockquote" title="Quote (&gt; + space)"><i class="fa-solid fa-quote-left"></i></button>
+                            <button type="button" data-cmd="formatBlock" data-value="pre" title="Code block (``` + Enter)"><i class="fa-solid fa-code"></i></button>
+                        </div>
+                        <span class="tool-sep"></span>
+                        <div class="tool-group">
+                            <button type="button" id="textColorBtn" title="Text color"><i class="fa-solid fa-font"></i><span class="color-bar" id="textColorBar"></span></button>
+                            <button type="button" id="highlightBtn" title="Highlight"><i class="fa-solid fa-highlighter"></i><span class="color-bar" id="highlightBar"></span></button>
+                        </div>
+                        <span class="tool-sep"></span>
+                        <div class="tool-group">
+                            <button type="button" id="insertLink" title="Insert link"><i class="fa-solid fa-link"></i></button>
+                            <button type="button" id="insertImage" title="Insert image"><i class="fa-regular fa-image"></i></button>
+                            <button type="button" data-cmd="insertHorizontalRule" title="Divider (--- + Enter)"><i class="fa-solid fa-minus"></i></button>
+                        </div>
+                        <span class="tool-sep"></span>
+                        <div class="tool-group">
+                            <button type="button" data-cmd="removeFormat" title="Clear formatting"><i class="fa-solid fa-eraser"></i></button>
+                        </div>
+                        <input type="file" id="imageInput" accept="image/*" hidden>
+                    </div>
+
+                    <!-- Color picker sheet; anchored below its toolbar button by JS -->
+                    <div class="color-sheet hidden" id="colorSheet" role="menu">
+                        <div class="color-sheet-title" id="colorSheetTitle">Text color</div>
+                        <div class="swatch-row" id="colorSwatches"></div>
+                        <button type="button" class="swatch-clear" id="colorClear">Remove color</button>
+                    </div>
                 </div>
 
                 <div id="noteContent" class="rich-editor" contenteditable="true" spellcheck="true"></div>
@@ -200,6 +255,18 @@ function note_preview(string $content): string {
                 <span id="wordCount">0 words</span>
                 <span id="updatedAt"></span>
             </footer>
+        </div>
+
+        <!-- Floating format bubble shown over selected text -->
+        <div class="format-bubble hidden" id="formatBubble" role="toolbar" aria-label="Format selection">
+            <button type="button" data-bcmd="bold" data-bstate="bold" title="Bold"><i class="fa-solid fa-bold"></i></button>
+            <button type="button" data-bcmd="italic" data-bstate="italic" title="Italic"><i class="fa-solid fa-italic"></i></button>
+            <button type="button" data-bcmd="underline" data-bstate="underline" title="Underline"><i class="fa-solid fa-underline"></i></button>
+            <button type="button" data-bcmd="strikeThrough" data-bstate="strikeThrough" title="Strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+            <span class="b-sep"></span>
+            <button type="button" id="bubbleLink" title="Link"><i class="fa-solid fa-link"></i></button>
+            <button type="button" id="bubbleHighlight" title="Highlight"><i class="fa-solid fa-highlighter"></i></button>
+            <button type="button" data-bcmd="removeFormat" title="Clear formatting"><i class="fa-solid fa-eraser"></i></button>
         </div>
     </main>
 
@@ -351,6 +418,6 @@ function note_preview(string $content): string {
 </div>
 
 <script>window.MEMOIR = {csrf: document.querySelector('meta[name="csrf-token"]').content};</script>
-<script src="assets/js/app.js"></script>
+<script src="<?= asset('assets/js/app.js') ?>"></script>
 </body>
 </html>

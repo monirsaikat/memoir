@@ -25,6 +25,22 @@ function request_json(): array {
     return json_decode(file_get_contents('php://input'), true) ?: [];
 }
 
+// Normalize a submitted tag list into the stored "a,b,c" form:
+// trimmed, comma-free, max 30 chars each, unique, at most 8 tags.
+function sanitize_tags(mixed $raw): string {
+    if (!is_array($raw)) return '';
+    $tags = [];
+    foreach ($raw as $tag) {
+        $tag = trim(preg_replace('/[,\s]+/u', ' ', (string) $tag));
+        $tag = mb_substr($tag, 0, 30);
+        if ($tag !== '' && !in_array($tag, $tags, true)) $tags[] = $tag;
+        if (count($tags) >= 8) break;
+    }
+    return implode(',', $tags);
+}
+
+ensure_schema();
+
 switch ($action) {
 
 case 'note':
@@ -65,14 +81,15 @@ case 'save-note':
     $folder = isset($data['folder_id']) && $data['folder_id'] !== '' ? (int) $data['folder_id'] : null;
     $icon = preg_match('/^fa-[a-z0-9-]+$/', (string) ($data['icon'] ?? '')) ? $data['icon'] : 'fa-note-sticky';
     $color = preg_match('/^#[A-Fa-f0-9]{6}$/', (string) ($data['color'] ?? '')) ? $data['color'] : '#6F5EE8';
+    $tags = sanitize_tags($data['tags'] ?? []);
     $pinned = !empty($data['is_pinned']) ? 1 : 0;
 
     $stmt = db()->prepare(
         "UPDATE notes
-         SET folder_id = ?, title = ?, content = ?, icon = ?, color = ?, is_pinned = ?, updated_at = NOW()
+         SET folder_id = ?, title = ?, content = ?, icon = ?, color = ?, tags = ?, is_pinned = ?, updated_at = NOW()
          WHERE id = ?"
     );
-    $stmt->execute([$folder, $title, $content, $icon, $color, $pinned, $id]);
+    $stmt->execute([$folder, $title, $content, $icon, $color, $tags, $pinned, $id]);
 
     json_response(['ok' => true, 'updated_at' => date('c')]);
 
@@ -111,15 +128,17 @@ case 'search':
     $q = trim($_GET['q'] ?? '');
     $folder = $_GET['folder'] ?? '';
     $pinned = $_GET['pinned'] ?? '';
+    $tag = trim($_GET['tag'] ?? '');
 
-    $sql = "SELECT n.id, n.folder_id, n.title, n.content, n.icon, n.color, n.is_pinned, n.updated_at, f.name folder_name
+    $sql = "SELECT n.id, n.folder_id, n.title, n.content, n.icon, n.color, n.tags, n.is_pinned, n.updated_at, f.name folder_name
             FROM notes n
             LEFT JOIN folders f ON f.id = n.folder_id
             WHERE 1=1";
     $params = [];
 
     if ($q !== '') {
-        $sql .= " AND (n.title LIKE ? OR n.content LIKE ?)";
+        $sql .= " AND (n.title LIKE ? OR n.content LIKE ? OR n.tags LIKE ?)";
+        $params[] = "%$q%";
         $params[] = "%$q%";
         $params[] = "%$q%";
     }
@@ -130,12 +149,27 @@ case 'search':
     if ($pinned === '1') {
         $sql .= " AND n.is_pinned = 1";
     }
+    if ($tag !== '') {
+        $sql .= " AND FIND_IN_SET(?, n.tags)";
+        $params[] = $tag;
+    }
     $sql .= " ORDER BY n.is_pinned DESC, n.updated_at DESC LIMIT 100";
 
     $stmt = db()->prepare($sql);
     $stmt->execute($params);
 
     json_response(['ok' => true, 'notes' => $stmt->fetchAll()]);
+
+case 'tags':
+    require_method('GET');
+    $counts = [];
+    foreach (db()->query("SELECT tags FROM notes WHERE tags <> ''")->fetchAll() as $row) {
+        foreach (explode(',', $row['tags']) as $tag) {
+            $counts[$tag] = ($counts[$tag] ?? 0) + 1;
+        }
+    }
+    ksort($counts, SORT_NATURAL | SORT_FLAG_CASE);
+    json_response(['ok' => true, 'tags' => $counts]);
 
 case 'upload':
     require_method('POST');

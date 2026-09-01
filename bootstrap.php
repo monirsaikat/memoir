@@ -87,6 +87,26 @@ function require_auth(): array {
     return $user;
 }
 
+// Version-stamped asset URL so browsers refetch changed CSS/JS immediately.
+function asset(string $path): string {
+    $file = __DIR__ . '/' . $path;
+    return e($path . '?v=' . (is_file($file) ? filemtime($file) : MEMOIR_VERSION));
+}
+
+// Lightweight in-place migration for installs created before tags existed.
+function ensure_schema(): void {
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+    try {
+        if (!db()->query("SHOW COLUMNS FROM notes LIKE 'tags'")->fetch()) {
+            db()->exec("ALTER TABLE notes ADD COLUMN tags VARCHAR(500) NOT NULL DEFAULT '' AFTER color");
+        }
+    } catch (Throwable) {
+        // Fresh installs get the column from the installer schema.
+    }
+}
+
 function json_response(array $data, int $status=200): never {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
@@ -96,7 +116,7 @@ function json_response(array $data, int $status=200): never {
 
 function sanitize_note_html(string $html): string {
     if ($html === '') return '';
-    $allowedTags = ['p','br','div','h2','h3','strong','b','em','i','u','s','ul','ol','li','blockquote','pre','code','a','img'];
+    $allowedTags = ['p','br','div','hr','h2','h3','strong','b','em','i','u','s','span','ul','ol','li','blockquote','pre','code','a','img'];
     $document = new DOMDocument('1.0', 'UTF-8');
     $previous = libxml_use_internal_errors(true);
     $document->loadHTML('<?xml encoding="utf-8" ?><div id="memoir-root">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
@@ -132,6 +152,17 @@ function sanitize_note_html(string $html): string {
                 if (preg_match('#^(https?://|/|uploads/)#i', $src)) $kept['src'] = $src;
                 $alt = mb_substr($child->getAttribute('alt'), 0, 200);
                 if ($alt !== '') $kept['alt'] = $alt;
+            } elseif ($tag === 'span') {
+                // Only hex text/highlight colors survive; everything else is dropped.
+                $style = strtolower(str_replace(' ', '', $child->getAttribute('style')));
+                $safeStyles = [];
+                if (preg_match('/(?<![-a-z])color:(#[0-9a-f]{3,8})/', $style, $m)) {
+                    $safeStyles[] = 'color:' . $m[1];
+                }
+                if (preg_match('/background-color:(#[0-9a-f]{3,8})/', $style, $m)) {
+                    $safeStyles[] = 'background-color:' . $m[1];
+                }
+                if ($safeStyles) $kept['style'] = implode(';', $safeStyles);
             }
             while ($child->attributes->length) $child->removeAttributeNode($child->attributes->item(0));
             foreach ($kept as $name => $value) $child->setAttribute($name, $value);

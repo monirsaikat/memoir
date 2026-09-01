@@ -149,6 +149,33 @@ button { cursor: pointer; }
     color: #777;
 }
 
+/* Sidebar tag cloud */
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 0 7px;
+}
+.tag-item {
+    border: 1px solid #dcd6c9;
+    background: transparent;
+    color: #65675f;
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .12s ease, color .12s ease;
+}
+.tag-item:hover { background: rgba(255, 255, 255, .66); }
+.tag-item.active {
+    background: #eeeafb;
+    border-color: #d8d1fa;
+    color: var(--accent);
+}
+.tag-item .count { font-size: 10px; }
+
 .sidebar-bottom {
     margin-top: auto;
     border-top: 1px solid #dad5ca;
@@ -367,10 +394,31 @@ button { cursor: pointer; }
    -------------------------------------------------------------------------- */
 
 .editor-panel {
+    position: relative; /* anchor for the floating format bubble */
     background: #fff;
     min-width: 0;
     overflow: hidden;
 }
+
+/* Slim, unobtrusive scrollbars for the scrolling panes */
+.rich-editor,
+.note-list {
+    scrollbar-width: thin;
+    scrollbar-color: #d6d1c4 transparent;
+}
+.rich-editor::-webkit-scrollbar,
+.note-list::-webkit-scrollbar { width: 8px; }
+.rich-editor::-webkit-scrollbar-track,
+.note-list::-webkit-scrollbar-track { background: transparent; }
+.rich-editor::-webkit-scrollbar-thumb,
+.note-list::-webkit-scrollbar-thumb {
+    background: #d6d1c4;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+.rich-editor::-webkit-scrollbar-thumb:hover,
+.note-list::-webkit-scrollbar-thumb:hover { background-color: #c1bbab; }
 
 .empty-state {
     height: 100%;
@@ -474,30 +522,213 @@ button { cursor: pointer; }
     background: transparent;
 }
 
+/* Tag row between the title and the toolbar */
+.tag-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 0 0 14px;
+}
+.tag-row > i {
+    color: #a9aaa2;
+    font-size: 11px;
+}
+.tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f1effd;
+    color: #5b4bd6;
+    border: 1px solid #ddd6fb;
+    border-radius: 999px;
+    padding: 3px 6px 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.tag-chip button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    opacity: .55;
+    font-size: 13px;
+    line-height: 1;
+    padding: 0 3px;
+}
+.tag-chip button:hover { opacity: 1; }
+#tagInput {
+    flex: 1;
+    min-width: 90px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-size: 12px;
+    padding: 4px 0;
+    color: var(--ink);
+}
+#tagInput::placeholder { color: #b2b3ad; }
+
+.toolbar-wrap { position: relative; }
+
 .toolbar {
-    height: 42px;
+    min-height: 46px;
+    padding: 6px 0;
     border-top: 1px solid #eeeae3;
     border-bottom: 1px solid #eeeae3;
     display: flex;
     align-items: center;
     gap: 2px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
+    row-gap: 4px;
+    flex-wrap: wrap; /* wrap to a second row instead of showing a scrollbar */
 }
-.toolbar button {
-    height: 29px;
-    min-width: 29px;
-    border: 0;
-    background: transparent;
-    border-radius: 6px;
-    font-size: 12px;
+.tool-group {
+    display: flex;
+    gap: 2px;
+    flex: 0 0 auto;
 }
-.toolbar button:hover { background: #f2f0eb; }
-.toolbar > span {
+.tool-sep {
     height: 18px;
     border-left: 1px solid #ddd8cf;
-    margin: 0 5px;
+    margin: 0 6px;
+    flex: 0 0 auto;
 }
+.toolbar button {
+    position: relative;
+    height: 31px;
+    min-width: 31px;
+    padding: 0 7px;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #5c5e56;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .12s ease, color .12s ease;
+}
+.toolbar button:hover {
+    background: #f2f0eb;
+    color: #1e211d;
+}
+.toolbar button.active {
+    background: #eeeafb;
+    color: var(--accent);
+}
+.toolbar .tool-label {
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+.color-bar {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 4px;
+    height: 3px;
+    border-radius: 2px;
+    background: #1e211d;
+}
+
+/* Color picker sheet — anchored below its toolbar button, kept inside the
+   editor column so it never runs off the edge of the screen. */
+.color-sheet {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 15;
+    width: 236px;
+    background: #fff;
+    border: 1px solid #ddd8cf;
+    border-radius: 14px;
+    padding: 13px;
+    box-shadow: 0 16px 46px rgba(25, 22, 15, .16);
+}
+.color-sheet-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    color: #94958f;
+    margin-bottom: 10px;
+}
+.swatch-row {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+}
+.swatch-row button {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid rgba(30, 33, 29, .12);
+    border-radius: 8px;
+    padding: 0;
+    transition: transform .1s ease, box-shadow .1s ease;
+}
+.swatch-row button:hover {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 2px rgba(111, 94, 232, .3);
+}
+.swatch-clear {
+    width: 100%;
+    margin-top: 10px;
+    border: 1px solid var(--line);
+    background: #faf9f6;
+    border-radius: 9px;
+    padding: 7px 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: #65675f;
+}
+.swatch-clear:hover { background: #f2f0eb; }
+
+/* Floating format bubble — a dark pill hovering over the selection */
+.format-bubble {
+    position: absolute;
+    z-index: 18;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: #22241f;
+    border-radius: 12px;
+    padding: 5px;
+    box-shadow: 0 12px 34px rgba(15, 14, 10, .3);
+    animation: bubble-in .14s ease;
+}
+.format-bubble button {
+    width: 31px;
+    height: 31px;
+    border: 0;
+    background: transparent;
+    color: #d9dad2;
+    border-radius: 8px;
+    font-size: 12px;
+    display: inline-grid;
+    place-items: center;
+    transition: background .12s ease, color .12s ease;
+}
+.format-bubble button:hover {
+    background: rgba(255, 255, 255, .13);
+    color: #fff;
+}
+.format-bubble button.active { color: #b4a7ff; }
+.format-bubble .b-sep {
+    width: 1px;
+    align-self: stretch;
+    margin: 3px 4px;
+    background: rgba(255, 255, 255, .16);
+}
+
+@keyframes bubble-in {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: none; }
+}
+
+.color-sheet { animation: bubble-in .14s ease; }
 
 .rich-editor {
     flex: 1;
@@ -506,10 +737,35 @@ button { cursor: pointer; }
     padding: 24px 0 80px;
     font-size: 16px;
     line-height: 1.75;
+    caret-color: var(--accent);
+    scroll-behavior: smooth;
 }
+.rich-editor::selection,
+.rich-editor ::selection { background: rgba(111, 94, 232, .18); }
 .rich-editor:empty:before {
-    content: "Start writing…";
+    content: "Start writing… (markdown works: # heading, - list, **bold**)";
     color: #b2b3ad;
+}
+.rich-editor a {
+    color: var(--accent);
+    text-underline-offset: 3px;
+}
+.rich-editor hr {
+    border: 0;
+    border-top: 1px solid #ddd8cf;
+    margin: 24px 0;
+}
+.rich-editor code {
+    background: #f1efe9;
+    border-radius: 5px;
+    padding: 2px 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .85em;
+}
+.rich-editor pre code {
+    background: transparent;
+    padding: 0;
+    font-size: inherit;
 }
 .rich-editor h2 {
     font-size: 25px;
@@ -864,7 +1120,15 @@ button { cursor: pointer; }
         font-size: 28px;
         padding-top: 28px;
     }
-    .toolbar { scrollbar-width: none; }
+    /* On touch screens a single scrollable row works better than wrapping;
+       the scrollbar itself stays hidden. */
+    .toolbar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 0;
+        height: 46px;
+        scrollbar-width: none;
+    }
     .toolbar::-webkit-scrollbar { display: none; }
 
     .settings-grid { grid-template-columns: 1fr; }
@@ -875,4 +1139,6 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
     * { scroll-behavior: auto !important; }
     .sidebar { transition: none; }
+    .format-bubble,
+    .color-sheet { animation: none; }
 }
