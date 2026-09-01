@@ -2159,6 +2159,54 @@ html[data-theme="dusk"] .auth-page { background: radial-gradient(circle at 50% -
 html[data-theme="dusk"] .auth-card { background: #29243d; border-color: #454068; }
 html[data-theme="dusk"] .auth-card input { background: #232036; border-color: #454068; }
 
+/* Aurora: deep arctic teal with luminous glassy surfaces (dark base) */
+html[data-theme="aurora"] {
+    --bg: #091b20;
+    --panel: #10282e;
+    --panel2: #16343b;
+    --ink: #e8fbf8;
+    --muted: #91b8b5;
+    --line: #28515a;
+}
+html[data-theme="aurora"] .sidebar { background: #0d2329; border-right-color: #20434b; }
+html[data-theme="aurora"] .sidebar-bottom { border-top-color: #20434b; }
+html[data-theme="aurora"] .note-list-panel { background: #0e272d; }
+html[data-theme="aurora"] .search-wrap input { background: #16343b; border-color: #28515a; }
+html[data-theme="aurora"] .search-wrap kbd { background: #1b3d45; border-color: #32616b; color: #82aaa8; }
+html[data-theme="aurora"] .note-card { background: #143139; border-color: #244a53; }
+html[data-theme="aurora"] .note-card:hover,
+html[data-theme="aurora"] .note-card.active { background: #1a3e46; border-color: #36717b; }
+html[data-theme="aurora"] .editor-head,
+html[data-theme="aurora"] .toolbar,
+html[data-theme="aurora"] .editor-foot { border-color: #20434b; }
+html[data-theme="aurora"] .icon-btn { background: #16343b; border-color: #28515a; }
+html[data-theme="aurora"] .icon-btn:hover { background: #1b3d45; }
+html[data-theme="aurora"] .rich-editor pre { background: #0d2329; border-color: #28515a; }
+html[data-theme="aurora"] .rich-editor code { background: #1b3d45; }
+html[data-theme="aurora"] .rich-editor table,
+html[data-theme="aurora"] .rich-editor th,
+html[data-theme="aurora"] .rich-editor td { border-color: #28515a; }
+html[data-theme="aurora"] .rich-editor th { background: #16343b; }
+html[data-theme="aurora"] .rich-editor ul.checklist li:before { background: #10282e; border-color: #40818a; }
+html[data-theme="aurora"] .modal,
+html[data-theme="aurora"] .color-sheet,
+html[data-theme="aurora"] .heading-sheet { background: #143139; border-color: #32616b; }
+html[data-theme="aurora"] .modal input,
+html[data-theme="aurora"] .modal select { background: #0d2329; border-color: #28515a; }
+html[data-theme="aurora"] .modal-actions button { background: #1b3d45; border-color: #32616b; }
+html[data-theme="aurora"] .icon-grid button { background: #0d2329; border-color: #28515a; }
+html[data-theme="aurora"] .swatch-clear { background: #1b3d45; border-color: #32616b; color: #91b8b5; }
+html[data-theme="aurora"] .settings-nav { background: #0d2329; }
+html[data-theme="aurora"] .format-bubble,
+html[data-theme="aurora"] .table-menu { background: #20505a; }
+html[data-theme="aurora"] .rich-editor,
+html[data-theme="aurora"] .note-list { scrollbar-color: #39717a transparent; }
+html[data-theme="aurora"] .rich-editor::-webkit-scrollbar-thumb,
+html[data-theme="aurora"] .note-list::-webkit-scrollbar-thumb { background: #39717a; }
+html[data-theme="aurora"] .auth-page { background: radial-gradient(circle at 50% -10%, #17414a 0, transparent 36rem), var(--bg); }
+html[data-theme="aurora"] .auth-card { background: #0d2329; border-color: #28515a; }
+html[data-theme="aurora"] .auth-card input { background: #091b20; border-color: #28515a; }
+
 /* Paper: clean high-contrast notebook (light base) */
 html[data-theme="paper"] {
     --bg: #f4efdf;
@@ -2220,6 +2268,9 @@ html[data-theme="paper"] .auth-card input { background: #fffdf5; border-color: #
 .thumb-dusk { background: #2e2a44; }
 .thumb-dusk .tt-side { background: #453b66; }
 .thumb-dusk .tt-main span + span { background: #5b4f82; width: 90%; }
+.thumb-aurora { background: #10282e; }
+.thumb-aurora .tt-side { background: #17414a; }
+.thumb-aurora .tt-main span + span { background: linear-gradient(90deg, #35b7a1, #7f6ce0); width: 90%; }
 .thumb-paper { background: #f8f3e6; }
 .thumb-paper .tt-side { background: #e8dcc4; }
 .thumb-paper .tt-main span + span { background: #d9ccb2; width: 90%; }

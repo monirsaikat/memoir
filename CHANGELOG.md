@@ -3,10 +3,19 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.9.0] - 2026-09-02
+
+### Added
+
+- Aurora theme adds a deep arctic-teal workspace with luminous cyan/violet
+  details and full editor, modal, authentication, and code styling.
 
 ### Fixed
 
+- Typing stays responsive in long notes. Word counting now waits for an idle
+  pause instead of scanning the complete document per keystroke, Markdown and
+  wiki-marker scans are bounded to the caret context, toolbar state work is
+  frame-coalesced, and large-note serialization waits for a longer quiet period.
 - Update checks now prefer IPv4 with a shared-host-friendly timeout and fall
   back from the GitHub API to the public releases feed when an outbound host is
   blocked. The fallback selects the highest stable version rather than relying
@@ -228,6 +237,7 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
+[1.9.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.9.0
 [1.8.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.8.0
 [1.7.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.7.0
 [1.6.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.6.0

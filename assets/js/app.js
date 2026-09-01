@@ -408,7 +408,10 @@
     if (!current) return;
     $('#saveStatus').textContent = 'Saving…';
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveNote, 650);
+    // Serializing rich text requires cloning its DOM. Give large notes a
+    // longer quiet period so that work does not land between keystrokes.
+    const delay = String(current.content || '').length > 30000 ? 1200 : 650;
+    saveTimer = setTimeout(saveNote, delay);
   }
 
   // Serialize the note body for saving: drop syntax-highlight markup from
@@ -575,7 +578,7 @@
     handleInlineShortcut();
     updateWikiMenu();
     queueSave();
-    updateWords();
+    updateWords(false);
   });
 
   $('#pinNote').onclick = () => {
@@ -860,7 +863,14 @@
     $('#headingLabel').textContent = heading ? `H${heading[1]}` : 'H';
     $('#headingBtn').classList.toggle('active', !!heading);
   }
-  document.addEventListener('selectionchange', syncToolbar);
+  let toolbarFrame = 0;
+  document.addEventListener('selectionchange', () => {
+    if (toolbarFrame) return;
+    toolbarFrame = requestAnimationFrame(() => {
+      toolbarFrame = 0;
+      syncToolbar();
+    });
+  });
 
   // Pressing a toolbar button must not steal the editor's selection.
   toolbarWrap.addEventListener('mousedown', e => {
@@ -1294,8 +1304,29 @@
     let block = range.startContainer;
     while (block !== editor && block.parentNode !== editor) block = block.parentNode;
 
-    const probe = range.cloneRange();
-    probe.setStart(block === editor ? editor : block, 0);
+    // A block shortcut is at most six marker characters at the very start.
+    // Avoid stringifying an entire long paragraph on every Space key.
+    const host = block === editor ? editor : block;
+    const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
+      acceptNode: node => node.textContent.replace(/\u200B/g, '')
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_SKIP,
+    });
+    const firstText = walker.nextNode();
+    const probe = document.createRange();
+    if (range.startContainer === host) {
+      // Chrome may place the caret on the contenteditable root while its very
+      // first text node is being created.
+      if (range.startOffset > 1) return null;
+      const leading = range.startOffset ? (host.childNodes[0]?.textContent || '').replace(/\u200B/g, '') : '';
+      if (leading.length > 8) return null;
+      probe.setStart(host, 0);
+      probe.setEnd(host, range.startOffset);
+    } else {
+      if (!firstText || range.startContainer !== firstText || range.startOffset > 8) return null;
+      probe.setStart(firstText, 0);
+      probe.setEnd(range.startContainer, range.startOffset);
+    }
     // Zero-width spaces (caret anchors left by inline conversions) must not
     // stop a typed marker like "###" from matching.
     return { probe, text: probe.toString().replace(/\u200B/g, ''), block };
@@ -1359,12 +1390,15 @@
     const node = sel.anchorNode;
     if (node.nodeType !== Node.TEXT_NODE || !editor.contains(node) || inCodeContext(node)) return false;
 
-    const upto = node.textContent.slice(0, sel.anchorOffset);
+    // Inline markers cannot span a newline. Bound the scan in case the
+    // browser represents a very long paragraph as one text node.
+    const windowStart = Math.max(0, sel.anchorOffset - 256);
+    const upto = node.textContent.slice(windowStart, sel.anchorOffset);
     for (const { tag, re } of INLINE_SHORTCUTS) {
       const m = re.exec(upto);
       if (!m) continue;
       const content = m[m.length - 1];
-      const start = m.index + (m.length === 3 ? m[1].length : 0);
+      const start = windowStart + m.index + (m.length === 3 ? m[1].length : 0);
 
       const range = document.createRange();
       range.setStart(node, start);
@@ -1691,9 +1725,24 @@
     }
   }
 
-  function updateWords() {
-    const text = $('#noteContent').innerText.trim();
-    $('#wordCount').textContent = `${text ? text.split(/\s+/).length : 0} words`;
+  let wordCountTimer = null;
+  let wordCountGeneration = 0;
+  function updateWords(immediate = true) {
+    clearTimeout(wordCountTimer);
+    const generation = ++wordCountGeneration;
+    const count = () => {
+      if (generation !== wordCountGeneration) return;
+      const text = $('#noteContent').innerText.trim();
+      const words = text ? (text.match(/\S+/g) || []).length : 0;
+      $('#wordCount').textContent = `${words} words`;
+    };
+    if (immediate) return count();
+
+    // The count is informational. Run it only after typing pauses and in an
+    // idle slice so it never competes with contenteditable input or paint.
+    wordCountTimer = setTimeout(() => {
+      (window.requestIdleCallback || function (callback) { setTimeout(callback, 0); })(count, { timeout: 700 });
+    }, 240);
   }
 
   // ---------------------------------------------------------------------
@@ -2115,10 +2164,11 @@
     const node = sel.anchorNode;
     if (node.nodeType !== Node.TEXT_NODE || !editor.contains(node)) return null;
     if (node.parentElement.closest('pre, code, a')) return null;
-    const upto = node.textContent.slice(0, sel.anchorOffset);
+    const windowStart = Math.max(0, sel.anchorOffset - 256);
+    const upto = node.textContent.slice(windowStart, sel.anchorOffset);
     const m = /\[\[([^\[\]\n]*)$/.exec(upto);
     if (!m) return null;
-    return { node, start: m.index, offset: sel.anchorOffset, query: m[1] };
+    return { node, start: windowStart + m.index, offset: sel.anchorOffset, query: m[1] };
   }
 
   function closedWikiContext() {
@@ -2127,10 +2177,12 @@
     const node = sel.anchorNode;
     if (node.nodeType !== Node.TEXT_NODE || !editor.contains(node)) return null;
     if (node.parentElement.closest('pre, code, a')) return null;
-    const upto = node.textContent.slice(0, sel.anchorOffset);
+    // Wiki markers are short and never cross a newline.
+    const windowStart = Math.max(0, sel.anchorOffset - 256);
+    const upto = node.textContent.slice(windowStart, sel.anchorOffset);
     const match = /\[\[([^\[\]\n]+)\]\]$/.exec(upto);
     if (!match) return null;
-    return { node, start: match.index, offset: sel.anchorOffset, query: match[1] };
+    return { node, start: windowStart + match.index, offset: sel.anchorOffset, query: match[1] };
   }
 
   function closeWikiMenu() {
@@ -2579,7 +2631,7 @@
   }
 
   // Each flavor rides on a light or dark base mode.
-  const THEME_MODES = { light: 'light', dark: 'dark', sepia: 'light', ocean: 'dark', midnight: 'dark', forest: 'dark', dusk: 'dark', paper: 'light' };
+  const THEME_MODES = { light: 'light', dark: 'dark', sepia: 'light', ocean: 'dark', midnight: 'dark', forest: 'dark', dusk: 'dark', aurora: 'dark', paper: 'light' };
 
   function applyTheme(choice) {
     let flavor = choice === 'system'

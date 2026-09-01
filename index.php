@@ -629,6 +629,10 @@ $clientNotes = array_map(static function (array $note) use (&$clientContentBudge
                             <span class="theme-thumb thumb-dusk"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
                             <span class="theme-name"><i class="fa-solid fa-cloud-moon"></i> Dusk</span>
                         </button>
+                        <button type="button" data-theme-opt="aurora">
+                            <span class="theme-thumb thumb-aurora"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
+                            <span class="theme-name"><i class="fa-solid fa-wand-magic-sparkles"></i> Aurora</span>
+                        </button>
                         <button type="button" data-theme-opt="paper">
                             <span class="theme-thumb thumb-paper"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
                             <span class="theme-name"><i class="fa-solid fa-file-lines"></i> Paper</span>
@@ -792,32 +796,32 @@ $clientNotes = array_map(static function (array $note) use (&$clientContentBudge
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir <?= e(MEMOIR_VERSION) ?></span>
-                <h3 id="whatsNewTitle">Connected notes, safer updates</h3>
+                <h3 id="whatsNewTitle">Faster where it matters</h3>
             </div>
         </div>
 
-        <p class="release-copy">Turn note names into links, discover related ideas, and keep Memoir current from Settings.</p>
+        <p class="release-copy">Long notes now keep up with your typing, with a luminous new workspace and stronger update connectivity.</p>
 
         <ul class="release-list">
             <li>
-                <i class="fa-solid fa-link"></i>
+                <i class="fa-solid fa-gauge-high"></i>
                 <div>
-                    <strong>Wiki-style internal links</strong>
-                    <span>Type [[ to search note names and insert a link without leaving the editor.</span>
+                    <strong>Fast long-note editing</strong>
+                    <span>Word counts and background editor work no longer compete with each keystroke in large documents.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-arrow-rotate-left"></i>
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
                 <div>
-                    <strong>Backlinks and mentions</strong>
-                    <span>See which notes link here, plus exact-title mentions that have not been linked yet.</span>
+                    <strong>Aurora theme</strong>
+                    <span>A deep arctic-teal dark theme with cyan and violet light across the complete workspace.</span>
                 </div>
             </li>
             <li>
                 <i class="fa-solid fa-cloud-arrow-down"></i>
                 <div>
-                    <strong>Verified updates</strong>
-                    <span>Check GitHub from Settings and install checksummed releases with backup and rollback protection.</span>
+                    <strong>More reliable updates</strong>
+                    <span>IPv4 preference, longer connection time, and a release-feed fallback improve shared-host compatibility.</span>
                 </div>
             </li>
         </ul>
