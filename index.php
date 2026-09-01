@@ -590,6 +590,18 @@ function note_preview(string $content): string {
                             <span class="theme-thumb thumb-midnight"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
                             <span class="theme-name"><i class="fa-solid fa-star"></i> Midnight</span>
                         </button>
+                        <button type="button" data-theme-opt="forest">
+                            <span class="theme-thumb thumb-forest"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
+                            <span class="theme-name"><i class="fa-solid fa-tree"></i> Forest</span>
+                        </button>
+                        <button type="button" data-theme-opt="dusk">
+                            <span class="theme-thumb thumb-dusk"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
+                            <span class="theme-name"><i class="fa-solid fa-cloud-moon"></i> Dusk</span>
+                        </button>
+                        <button type="button" data-theme-opt="paper">
+                            <span class="theme-thumb thumb-paper"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
+                            <span class="theme-name"><i class="fa-solid fa-file-lines"></i> Paper</span>
+                        </button>
                     </div>
 
                     <h4>Accent color</h4>
