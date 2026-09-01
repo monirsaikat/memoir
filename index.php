@@ -8,6 +8,7 @@ $notes = db()->query("SELECT n.*, f.name folder_name FROM notes n LEFT JOIN fold
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" content="<?=csrf_token()?>">
 <title><?=e($settings['app_name'] ?? 'Memoir')?></title>
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
@@ -15,7 +16,7 @@ $notes = db()->query("SELECT n.*, f.name folder_name FROM notes n LEFT JOIN fold
 </head><body>
 <div class="app-shell">
 <aside class="sidebar">
-<div class="brand"><span class="brand-mark">M</span><span><?=e($settings['app_name'] ?? 'Memoir')?></span></div>
+<div class="brand"><img class="brand-logo" src="assets/img/memoir-logo.png" alt=""><span><?=e($settings['app_name'] ?? 'Memoir')?></span><button class="icon-btn mobile-only sidebar-close" id="closeSidebar" type="button" aria-label="Close navigation"><i class="fa-solid fa-xmark"></i></button></div>
 <button class="new-note-btn" id="newNote"><i class="fa-solid fa-plus"></i> New note</button>
 <nav class="main-nav">
 <button class="nav-item active" data-folder=""><i class="fa-regular fa-note-sticky"></i><span>All notes</span><span class="count"><?=count($notes)?></span></button>
@@ -28,23 +29,26 @@ $notes = db()->query("SELECT n.*, f.name folder_name FROM notes n LEFT JOIN fold
 <?php endforeach ?>
 </div>
 <div class="sidebar-bottom">
+<button id="whatsNewBtn"><i class="fa-solid fa-sparkles"></i> What’s new <span class="version-pill">v<?= e(MEMOIR_VERSION) ?></span></button>
 <button id="settingsBtn"><i class="fa-solid fa-sliders"></i> Settings</button>
-<a href="logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out</a>
+<form method="post" action="logout.php"><input type="hidden" name="_csrf" value="<?= csrf_token() ?>"><button type="submit"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out</button></form>
 </div>
 </aside>
+<button class="mobile-scrim" id="mobileScrim" type="button" aria-label="Close navigation"></button>
 
 <section class="note-list-panel">
 <div class="list-head">
 <div><h1 id="listTitle">All notes</h1><span id="listCount"><?=count($notes)?> notes</span></div>
-<button id="collapseSidebar" class="icon-btn mobile-only"><i class="fa-solid fa-bars"></i></button>
+<button id="collapseSidebar" class="icon-btn mobile-only" type="button" aria-label="Open navigation"><i class="fa-solid fa-bars"></i></button>
 </div>
-<div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="globalSearch" placeholder="Search everything…"><kbd>⌘ K</kbd></div>
+<div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="globalSearch" type="search" name="memoir_note_search" placeholder="Search notes" aria-label="Search notes" autocomplete="off" autocapitalize="off" spellcheck="false" readonly data-1p-ignore data-lpignore="true" data-form-type="other"><kbd>⌘ K</kbd></div>
 <div id="noteList" class="note-list">
+<?php if (!$notes): ?><div class="list-empty"><i class="fa-regular fa-compass"></i><strong>No notes yet</strong><span>Create your first note to get started.</span></div><?php endif ?>
 <?php foreach($notes as $n): ?>
 <button class="note-card" data-id="<?=$n['id']?>" data-folder="<?=$n['folder_id']??''?>" data-pinned="<?=$n['is_pinned']?>">
 <div class="note-card-top"><i class="fa-solid <?=e($n['icon'])?>" style="color:<?=e($n['color']==='#FFFFFF'?'#6f5ee8':$n['color'])?>"></i><?php if($n['is_pinned']):?><i class="fa-solid fa-thumbtack pin-mini"></i><?php endif ?></div>
 <strong><?=e($n['title'])?></strong>
-<p><?=e(mb_strimwidth(strip_tags($n['content']),0,115,'…'))?></p>
+<p><?=e(mb_strimwidth(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($n['content']), ENT_QUOTES | ENT_HTML5, 'UTF-8')),0,115,'…'))?></p>
 <div class="note-meta"><span><?=e($n['folder_name']??'Unfiled')?></span><time><?=date('M j',strtotime($n['updated_at']))?></time></div>
 </button>
 <?php endforeach ?>
@@ -58,6 +62,7 @@ $notes = db()->query("SELECT n.*, f.name folder_name FROM notes n LEFT JOIN fold
 </div>
 <div id="editorView" class="editor-view hidden">
 <header class="editor-head">
+<button class="icon-btn mobile-only" id="backToList" type="button" aria-label="Back to notes"><i class="fa-solid fa-arrow-left"></i></button>
 <div class="crumb"><span id="crumbFolder">Unfiled</span><i class="fa-solid fa-chevron-right"></i><span id="saveStatus">Saved</span></div>
 <div class="editor-actions">
 <button class="icon-btn" id="pinNote" title="Pin"><i class="fa-solid fa-thumbtack"></i></button>
@@ -90,8 +95,8 @@ $notes = db()->query("SELECT n.*, f.name folder_name FROM notes n LEFT JOIN fold
 </main>
 </div>
 
-<div class="modal-backdrop hidden" id="folderModal"><div class="modal">
-<h3>New folder</h3><label>Name</label><input id="folderName" placeholder="e.g. Server notes">
+<div class="modal-backdrop hidden" id="folderModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="folderModalTitle">
+<h3 id="folderModalTitle">New folder</h3><label>Name</label><input id="folderName" placeholder="e.g. Server notes" autocomplete="off">
 <label>Icon</label><div class="icon-grid" id="folderIcons">
 <?php foreach(['fa-folder','fa-code','fa-server','fa-briefcase','fa-lightbulb','fa-book','fa-heart','fa-star','fa-globe','fa-terminal'] as $i): ?>
 <button data-icon="<?=$i?>"><i class="fa-solid <?=$i?>"></i></button>
@@ -103,8 +108,8 @@ $notes = db()->query("SELECT n.*, f.name folder_name FROM notes n LEFT JOIN fold
 <div class="modal-actions"><button data-close>Cancel</button><button class="primary-btn" id="saveFolder">Create folder</button></div>
 </div></div>
 
-<div class="modal-backdrop hidden" id="styleModal"><div class="modal">
-<h3>Note appearance</h3><label>Icon</label><div class="icon-grid" id="noteIcons">
+<div class="modal-backdrop hidden" id="styleModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="styleModalTitle">
+<h3 id="styleModalTitle">Note appearance</h3><label>Icon</label><div class="icon-grid" id="noteIcons">
 <?php foreach(['fa-note-sticky','fa-code','fa-terminal','fa-lightbulb','fa-book','fa-heart','fa-star','fa-server','fa-list-check','fa-wand-magic-sparkles'] as $i): ?><button data-icon="<?=$i?>"><i class="fa-solid <?=$i?>"></i></button><?php endforeach ?>
 </div>
 <label>Accent color</label><div class="color-row" id="noteColors">
@@ -113,18 +118,29 @@ $notes = db()->query("SELECT n.*, f.name folder_name FROM notes n LEFT JOIN fold
 <div class="modal-actions"><button data-close>Close</button></div>
 </div></div>
 
-<div class="modal-backdrop hidden" id="settingsModal"><div class="modal wide">
-<h3>Settings</h3>
+<div class="modal-backdrop hidden" id="settingsModal"><div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+<h3 id="settingsModalTitle">Settings</h3>
 <div class="settings-grid">
-<div><label>App name</label><input id="setAppName" value="<?=e($settings['app_name']??'Memoir')?>"></div>
-<div><label>SMTP host</label><input id="setSmtpHost" value="<?=e($settings['smtp_host']??'')?>"></div>
+<div><label>App name</label><input id="setAppName" autocomplete="off" value="<?=e($settings['app_name']??'Memoir')?>"></div>
+<div><label>SMTP host</label><input id="setSmtpHost" autocomplete="off" value="<?=e($settings['smtp_host']??'')?>"></div>
 <div><label>SMTP port</label><input id="setSmtpPort" value="<?=e((string)($settings['smtp_port']??587))?>"></div>
 <div><label>Security</label><select id="setSmtpSecurity"><option value="tls" <?=($settings['smtp_security']??'')==='tls'?'selected':''?>>TLS</option><option value="ssl" <?=($settings['smtp_security']??'')==='ssl'?'selected':''?>>SSL</option><option value="none">None</option></select></div>
-<div><label>SMTP username</label><input id="setSmtpUser" value="<?=e($settings['smtp_user']??'')?>"></div>
-<div><label>SMTP password</label><input type="password" id="setSmtpPass" placeholder="Leave blank to keep current"></div>
+<div><label>SMTP username</label><input id="setSmtpUser" autocomplete="off" value="<?=e($settings['smtp_user']??'')?>"></div>
+<div><label>SMTP password</label><input type="password" id="setSmtpPass" autocomplete="new-password" placeholder="Leave blank to keep current"></div>
 <div class="full"><label>From email</label><input id="setSmtpFrom" value="<?=e($settings['smtp_from']??'')?>"></div>
 </div>
 <div class="modal-actions"><button data-close>Cancel</button><button class="primary-btn" id="saveSettings">Save settings</button></div>
+</div></div>
+
+<div class="modal-backdrop hidden" id="whatsNewModal"><div class="modal release-modal" role="dialog" aria-modal="true" aria-labelledby="whatsNewTitle">
+<div class="release-head"><img src="assets/img/memoir-logo.png" alt=""><div><span class="release-label">Memoir <?= e(MEMOIR_VERSION) ?></span><h3 id="whatsNewTitle">Fresh start, safer foundation</h3></div></div>
+<p class="release-copy">This release makes Memoir ready for simple ZIP-to-cPanel installation and public open-source use.</p>
+<ul class="release-list">
+<li><i class="fa-solid fa-wand-magic-sparkles"></i><div><strong>A cleaner installer</strong><span>Guided setup, server checks, safer validation, and useful cPanel defaults.</span></div></li>
+<li><i class="fa-solid fa-shield-halved"></i><div><strong>Security hardening</strong><span>Protected runtime files, sanitized note HTML, safer sessions, and POST-only sign out.</span></div></li>
+<li><i class="fa-solid fa-bookmark"></i><div><strong>A real Memoir identity</strong><span>A new memory-page logo and favicon across the product.</span></div></li>
+</ul>
+<div class="modal-actions"><a class="changelog-link" href="CHANGELOG.md" target="_blank" rel="noopener">Full changelog</a><button data-close>Got it</button></div>
 </div></div>
 
 <script>window.MEMOIR={csrf:document.querySelector('meta[name="csrf-token"]').content};</script>

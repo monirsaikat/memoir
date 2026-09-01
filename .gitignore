@@ -1,5 +1,8 @@
 config.php
-storage/installed.lock
+config.php.tmp-*
+storage/*
+!storage/.htaccess
+!storage/index.html
 uploads/*
 !uploads/.htaccess
 !uploads/index.html

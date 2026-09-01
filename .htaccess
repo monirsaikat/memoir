@@ -1,12 +1,14 @@
-Options -Indexes
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
 DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteRule ^storage/ - [F,L]
-RewriteRule ^config\.php$ - [F,L]
+RewriteRule ^(?:config\.php(?:\..*)?|\.env|composer\.(?:json|lock)|.*\.(?:sql|bak|log))$ - [F,L,NC]
 </IfModule>
 
-<FilesMatch "^\.">
+<FilesMatch "^(?:\.|config\.php)">
     Require all denied
 </FilesMatch>

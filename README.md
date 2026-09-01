@@ -1,252 +1,162 @@
-# Memoir
+<p align="center">
+  <img src="assets/img/memoir-logo.png" width="104" alt="Memoir logo">
+</p>
 
-Memoir is a lightweight, single-user, self-hosted note manager designed for ordinary cPanel/shared hosting.
+<h1 align="center">Memoir</h1>
 
-It is built for people who want a private notes app on their own domain without Docker, Node.js, Composer, or a VPS.
+<p align="center">A calm, private notes app that runs on ordinary cPanel hosting.</p>
+
+Memoir is a lightweight, single-owner note manager for people who want their
+notes on their own domain. It needs PHP and MySQL—no Docker, Node.js, Composer,
+SSH, or VPS required.
 
 ## Features
 
-- Folder-based notes
-- Global search
-- Rich-text editing
-- Markdown mode
-- Copy/paste and drag/drop image uploads
-- Note pinning, icons, and accent colors
-- Autosave
-- Keyboard shortcuts
-- Light-only interface
-- Optional SMTP configuration
-- Installer-driven setup
+- Folder-based notes, pinning, search, icons, and accent colors
+- Rich-text editing with image paste, drop, and upload
+- Autosave and useful keyboard shortcuts
+- Responsive, distraction-free interface
+- Browser-based installer built for cPanel/shared hosting
+- Optional SMTP settings
+- Installer lock, CSRF protection, upload restrictions, and stored-HTML sanitizing
 
 ## Requirements
 
-- PHP 8.1+
-- PDO MySQL
-- `fileinfo`
-- `mbstring`
-- MySQL or MariaDB
-- Apache recommended
+- PHP 8.1 or newer
+- MySQL 5.7+, MariaDB 10.3+, or a compatible newer version
+- PHP extensions: `pdo_mysql`, `fileinfo`, `mbstring`, and `dom`
+- Apache 2.4+ with `.htaccess` support (recommended)
+- Write access to the app root during installation and to `storage/` and `uploads/`
 
-## Self-host on cPanel
+## Install from a ZIP on cPanel
 
-Memoir is designed around a simple shared-hosting flow:
+1. Download the latest release ZIP from GitHub. Prefer a release asset over the
+   automatic “Source code” archive when both are available.
+2. In **cPanel → File Manager**, open `public_html`, create your chosen folder
+   (for example `memoir`), upload the ZIP, and extract it.
+3. Make sure `index.php`, `install/`, `assets/`, and `storage/` are directly in
+   that folder—not inside an extra `memoir-main/` directory.
+4. In **cPanel → MySQL Database Wizard**, create a database and user, assign the
+   user with **ALL PRIVILEGES**, and keep the full cPanel-prefixed names.
+5. In **Select PHP Version** or **MultiPHP Manager**, select PHP 8.1+ and enable
+   `pdo_mysql`, `fileinfo`, `mbstring`, and `dom`.
+6. Visit `https://example.com/memoir/install/` and complete the guided setup.
+7. Sign in with the owner account you created.
 
-```text
-Download ZIP
-   ↓
-Upload to cPanel
-   ↓
-Extract
-   ↓
-Create MySQL database + user
-   ↓
-Open /install/
-   ↓
-Enter database + owner details
-   ↓
-Memoir creates its tables
-   ↓
-Sign in
-```
+The installer creates the tables, writes `config.php`, and creates
+`storage/installed.lock`. You do not need to import SQL manually.
 
-### 1. Choose where Memoir will live
+### Folder and URL examples
 
-You can install Memoir in a subfolder:
+Subfolder installation:
 
 ```text
-https://example.com/memoir
+Files: public_html/memoir/
+App URL: https://example.com/memoir
+Installer: https://example.com/memoir/install/
 ```
 
-or on a subdomain:
+Subdomain installation:
 
 ```text
-https://notes.example.com
+Files: the document root configured for notes.example.com
+App URL: https://notes.example.com
+Installer: https://notes.example.com/install/
 ```
 
-For a subfolder, open **cPanel → File Manager → public_html** and create a folder such as `memoir`.
+Do not include `/install/` in the application URL field.
 
-For a subdomain, create the subdomain in cPanel first and upload Memoir into that subdomain's document root.
+### Permissions
 
-### 2. Upload and extract Memoir
+Most cPanel hosts work with `755` for directories and `644` for files. Memoir
+must be able to write the application root once to create `config.php`, and must
+keep `storage/` and `uploads/` writable. Avoid `777` unless your host explicitly
+requires it.
 
-Upload the Memoir ZIP into the chosen folder and use **Extract** in cPanel File Manager.
+## Updating
 
-After extraction, the application root should look roughly like this:
-
-```text
-memoir/
-├── assets/
-├── install/
-├── storage/
-├── uploads/
-├── api.php
-├── bootstrap.php
-├── index.php
-├── login.php
-└── config.example.php
-```
-
-Do not leave the project inside an extra nested folder such as `memoir/Memoir-main/` unless that is intentionally your application URL.
-
-### 3. Create the MySQL database
-
-On most shared cPanel hosts, the easiest route is:
-
-**cPanel → MySQL Database Wizard**
-
-Create:
-
-1. A new database
-2. A new database user
-3. A strong database password
-4. Assign the user to the database with **ALL PRIVILEGES**
-
-Keep these values ready:
-
-```text
-Database host: localhost
-Database name: yourcpanel_memoir
-Database user: yourcpanel_memoiruser
-Database password: ************
-```
-
-cPanel usually prefixes database names and usernames with your hosting account username. Use the complete values shown by cPanel.
-
-You do **not** need to import an SQL file manually. Memoir's installer creates the required tables automatically.
-
-### 4. Check PHP
-
-Use **cPanel → Select PHP Version** or **MultiPHP Manager** and select PHP 8.1 or newer.
-
-Make sure these extensions are enabled:
-
-```text
-pdo_mysql
-fileinfo
-mbstring
-```
-
-### 5. Run the installer
-
-Open the install URL in your browser:
-
-```text
-https://example.com/memoir/install/
-```
-
-or:
-
-```text
-https://notes.example.com/install/
-```
-
-The installer checks the server requirements before installation.
-
-Enter your database credentials, application URL, owner email/password, timezone, and optional SMTP configuration.
-
-Example application URL:
-
-```text
-https://example.com/memoir
-```
-
-Do not include `/install/` in the application URL.
-
-### 6. File permissions
-
-Memoir needs to write to:
-
-```text
-storage/
-uploads/
-```
-
-On most cPanel servers, normal permissions such as `755` for folders work automatically.
-
-If the installer reports that either directory is not writable, use cPanel File Manager → **Change Permissions**. Avoid `777` unless your hosting provider explicitly requires it.
-
-### 7. Finish installation
-
-Click **Install Memoir**.
-
-Memoir will:
-
-- connect to MySQL/MariaDB
-- create its tables
-- create the single owner account
-- save the application configuration
-- create the installer lock
-- redirect you to the login page
-
-After installation, sign in with the owner email and password you entered during setup.
-
-### 8. Images and uploads
-
-Images pasted or dropped into notes are stored inside:
-
-```text
-uploads/
-```
-
-The folder is protected from executing PHP-style files by the included `.htaccess` rules.
-
-For public repositories, runtime uploads are ignored by Git so personal note images are not accidentally committed.
-
-### 9. Optional SMTP
-
-SMTP is optional for the current Memoir experience. If you want to configure it during installation, typical cPanel mail settings look like:
-
-```text
-SMTP host: mail.example.com
-SMTP port: 465
-Security: SSL
-Username: you@example.com
-Password: your mailbox password
-From email: you@example.com
-```
-
-Your hosting provider may instead recommend port `587` with TLS.
-
-### 10. Updating Memoir later
-
-Before replacing application files, back up:
+Before every update, back up:
 
 ```text
 config.php
-uploads/
 storage/
+uploads/
+your MySQL/MariaDB database
 ```
 
-and export the MySQL database from **phpMyAdmin**.
+Then replace the application files with the new release while preserving those
+runtime files and folders. Read [CHANGELOG.md](CHANGELOG.md) for release-specific
+notes. Never overwrite `config.php` with `config.example.php`.
 
-Do not overwrite your runtime `config.php` with `config.example.php`.
+## Security notes
+
+- Always use HTTPS in production.
+- Keep PHP, the database server, and Memoir updated.
+- Use a dedicated database user and a strong, unique owner password.
+- Do not commit or publish `config.php`, `storage/`, or uploaded files.
+- The included Apache rules block direct access to configuration/storage and
+  prevent script execution inside `uploads/`. If your host ignores `.htaccess`,
+  reproduce those protections in its web-server configuration before use.
+- SMTP credentials are stored in the database so Memoir can use them; protect
+  database backups accordingly.
+
+Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
+## Troubleshooting
+
+### `/install/` returns 403 Forbidden
+
+Confirm the release contains `install/index.php` and that the `install` folder
+and file are readable (`755` directory, `644` file is typical). A missing index
+file makes Apache reject directory listing. Memoir redirects an already-installed
+site to sign-in instead of showing a 403.
+
+### The installer reports a database error
+
+Use the complete cPanel-prefixed database/user names, confirm the user has been
+assigned to the database with all privileges, and try `localhost` unless your
+host documents a different hostname.
+
+### Images do not upload
+
+Check that `uploads/` is writable, PHP `file_uploads` is enabled, and your host’s
+`upload_max_filesize` and `post_max_size` allow the file. Memoir accepts JPEG,
+PNG, WebP, and GIF images up to 8 MB.
+
+### Setup was interrupted
+
+If `config.php` was created, restore it or remove it only when intentionally
+starting over. Use an empty database for a clean reinstall. Never delete a live
+configuration or database without a backup.
+
+## Development
+
+Clone the repository into a PHP-capable document root, create an empty MySQL
+database, then open `/install/`. There is no build step.
+
+Run syntax checks before contributing:
+
+```bash
+php -l bootstrap.php
+php -l install/index.php
+php -l login.php
+php -l index.php
+php -l api.php
+php -l logout.php
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for project principles, security rules,
+manual test coverage, and the pull-request checklist.
 
 ## Keyboard shortcuts
 
 - `Ctrl/Cmd + N` — new note
 - `Ctrl/Cmd + K` — global search
 - `Ctrl/Cmd + S` — save immediately
-- `Ctrl/Cmd + Shift + M` — toggle Markdown mode
-- `Ctrl/Cmd + B` — bold in the rich editor
-- `Ctrl/Cmd + I` — italic in the rich editor
-- `Esc` — close an open dialog
+- `Ctrl/Cmd + B` — bold
+- `Ctrl/Cmd + I` — italic
+- `Esc` — close a dialog
 
-## Troubleshooting
+## License
 
-**Installer redirects or shows a blank page**  
-Confirm PHP 8.1+ is selected and PHP errors are not being suppressed by the hosting configuration.
-
-**Database connection failed**  
-Use the complete cPanel database name/user, confirm the password, and make sure the user is assigned to the database with all privileges.
-
-**Images do not upload**  
-Check that `uploads/` is writable and that PHP `file_uploads` is enabled.
-
-**Installer says Memoir is already installed**  
-That is expected after installation. Memoir creates `storage/installed.lock` to disable the installer.
-
-## Security
-
-After installation, `storage/installed.lock` prevents the installer from running again. Runtime `config.php`, installer locks, and uploaded note media are ignored by Git so credentials and personal data are not committed accidentally.
-
-Use HTTPS for every production installation and keep PHP and Memoir updated.
+Memoir is open-source software released under the [MIT License](LICENSE).
