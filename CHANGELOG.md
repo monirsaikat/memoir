@@ -3,6 +3,24 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-09-01
+
+### Added
+
+- Theme switching: light, dark, and system modes with a full dark palette
+  across the app and sign-in page. The choice is remembered per browser and
+  applied before first paint, and "system" follows the OS live.
+- Accent colors: eight selectable accents that instantly re-tint the whole
+  interface (buttons, chips, highlights, selection) via a single CSS variable.
+- Password change in Settings, protected by current-password verification,
+  a 12-character minimum, and session renewal after the change.
+
+### Changed
+
+- Settings is now a two-pane hub: section navigation (Appearance, General,
+  Email, Account) on the left, content on the right, with miniature CSS-drawn
+  theme preview cards instead of plain toggle buttons.
+
 ## [1.1.0] - 2026-09-01
 
 ### Added
@@ -78,5 +96,6 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
+[1.1.1]: https://github.com/monirsaikat/memoir/releases/tag/v1.1.1
 [1.1.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.1.0
 [1.0.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.0.0

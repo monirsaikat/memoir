@@ -828,6 +828,108 @@
   };
 
   // ---------------------------------------------------------------------
+  // Theme (light / dark / system, remembered per browser)
+  // ---------------------------------------------------------------------
+
+  const THEME_KEY = 'memoir-theme';
+
+  function storedTheme() {
+    try {
+      return localStorage.getItem(THEME_KEY) || 'system';
+    } catch {
+      return 'system';
+    }
+  }
+
+  function applyTheme(choice) {
+    const dark = choice === 'dark'
+      || (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    $$('#themeToggle button').forEach(btn =>
+      btn.classList.toggle('active', btn.dataset.themeOpt === choice));
+  }
+
+  $('#themeToggle').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    try {
+      localStorage.setItem(THEME_KEY, btn.dataset.themeOpt);
+    } catch {}
+    applyTheme(btn.dataset.themeOpt);
+  });
+
+  // Follow the OS when the choice is "system".
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(storedTheme()));
+  applyTheme(storedTheme());
+
+  // Accent color: one CSS variable drives every tint via color-mix().
+  const ACCENT_KEY = 'memoir-accent';
+
+  function applyAccent(color) {
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
+    document.documentElement.style.setProperty('--accent', color);
+    $$('#accentRow button').forEach(btn =>
+      btn.classList.toggle('active', btn.dataset.accent.toLowerCase() === color.toLowerCase()));
+  }
+
+  $('#accentRow').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    try {
+      localStorage.setItem(ACCENT_KEY, btn.dataset.accent);
+    } catch {}
+    applyAccent(btn.dataset.accent);
+  });
+
+  (() => {
+    let saved = '#6F5EE8';
+    try {
+      saved = localStorage.getItem(ACCENT_KEY) || saved;
+    } catch {}
+    applyAccent(saved);
+  })();
+
+  // Settings navigation: one pane visible at a time.
+  $('.settings-nav').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-pane]');
+    if (!btn) return;
+    $$('.settings-nav button').forEach(x => x.classList.toggle('active', x === btn));
+    $$('.settings-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== btn.dataset.pane));
+  });
+
+  // ---------------------------------------------------------------------
+  // Change password
+  // ---------------------------------------------------------------------
+
+  $('#changePassword').onclick = async () => {
+    const status = $('#pwStatus');
+    const current = $('#pwCurrent').value;
+    const next = $('#pwNew').value;
+    const confirmed = $('#pwConfirm').value;
+
+    status.className = 'pw-status error';
+    if (next.length < 12) {
+      status.textContent = 'New password must be at least 12 characters.';
+      return;
+    }
+    if (next !== confirmed) {
+      status.textContent = 'New passwords do not match.';
+      return;
+    }
+    try {
+      await api('change-password', {
+        method: 'POST',
+        body: JSON.stringify({ current, password: next }),
+      });
+      status.className = 'pw-status ok';
+      status.textContent = 'Password updated.';
+      $('#pwCurrent').value = $('#pwNew').value = $('#pwConfirm').value = '';
+    } catch (e) {
+      status.textContent = e.message;
+    }
+  };
+
+  // ---------------------------------------------------------------------
   // URL state: the current view lives in query params, so a reload (or a
   // bookmarked/shared link) restores the same note, filter, and search.
   // ---------------------------------------------------------------------

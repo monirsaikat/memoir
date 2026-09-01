@@ -210,6 +210,28 @@ case 'upload':
     global $config;
     json_response(['ok' => true, 'url' => rtrim($config['app']['url'], '/') . "/uploads/$ym/$name"]);
 
+case 'change-password':
+    require_method('POST');
+    $data = request_json();
+    $currentPass = (string) ($data['current'] ?? '');
+    $newPass = (string) ($data['password'] ?? '');
+
+    if (strlen($newPass) < 12) {
+        json_response(['ok' => false, 'message' => 'New password must be at least 12 characters.'], 422);
+    }
+    $stmt = db()->prepare("SELECT password FROM users WHERE id = ?");
+    $stmt->execute([$user['id']]);
+    $hash = $stmt->fetchColumn();
+    if (!$hash || !password_verify($currentPass, $hash)) {
+        json_response(['ok' => false, 'message' => 'Current password is incorrect.'], 422);
+    }
+
+    db()->prepare("UPDATE users SET password = ? WHERE id = ?")
+        ->execute([password_hash($newPass, PASSWORD_DEFAULT), $user['id']]);
+    session_regenerate_id(true);
+
+    json_response(['ok' => true]);
+
 case 'settings':
     require_method('POST');
     $data = request_json();

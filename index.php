@@ -45,6 +45,20 @@ function note_preview(string $content): string {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="csrf-token" content="<?= csrf_token() ?>">
     <title><?= e($settings['app_name'] ?? 'Memoir') ?></title>
+    <script>
+    // Apply the saved theme before first paint to avoid a light/dark flash.
+    (function () {
+        try {
+            var choice = localStorage.getItem('memoir-theme') || 'system';
+            var dark = choice === 'dark' || (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+            var accent = localStorage.getItem('memoir-accent');
+            if (accent && /^#[0-9a-fA-F]{6}$/.test(accent)) {
+                document.documentElement.style.setProperty('--accent', accent);
+            }
+        } catch (e) {}
+    })();
+    </script>
     <link rel="icon" type="image/png" href="assets/img/favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -328,41 +342,111 @@ function note_preview(string $content): string {
 
 <!-- Modal: settings -->
 <div class="modal-backdrop hidden" id="settingsModal">
-    <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
-        <h3 id="settingsModalTitle">Settings</h3>
+    <div class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+        <div class="settings-layout">
+            <nav class="settings-nav">
+                <span class="settings-nav-title" id="settingsModalTitle">Settings</span>
+                <button type="button" class="active" data-pane="appearance"><i class="fa-solid fa-palette"></i> Appearance</button>
+                <button type="button" data-pane="general"><i class="fa-solid fa-sliders"></i> General</button>
+                <button type="button" data-pane="email"><i class="fa-solid fa-envelope"></i> Email</button>
+                <button type="button" data-pane="account"><i class="fa-solid fa-user-shield"></i> Account</button>
+                <div class="settings-nav-foot">Memoir v<?= e(MEMOIR_VERSION) ?></div>
+            </nav>
 
-        <div class="settings-grid">
-            <div>
-                <label>App name</label>
-                <input id="setAppName" autocomplete="off" value="<?= e($settings['app_name'] ?? 'Memoir') ?>">
-            </div>
-            <div>
-                <label>SMTP host</label>
-                <input id="setSmtpHost" autocomplete="off" value="<?= e($settings['smtp_host'] ?? '') ?>">
-            </div>
-            <div>
-                <label>SMTP port</label>
-                <input id="setSmtpPort" value="<?= e((string) ($settings['smtp_port'] ?? 587)) ?>">
-            </div>
-            <div>
-                <label>Security</label>
-                <select id="setSmtpSecurity">
-                    <option value="tls" <?= ($settings['smtp_security'] ?? '') === 'tls' ? 'selected' : '' ?>>TLS</option>
-                    <option value="ssl" <?= ($settings['smtp_security'] ?? '') === 'ssl' ? 'selected' : '' ?>>SSL</option>
-                    <option value="none">None</option>
-                </select>
-            </div>
-            <div>
-                <label>SMTP username</label>
-                <input id="setSmtpUser" autocomplete="off" value="<?= e($settings['smtp_user'] ?? '') ?>">
-            </div>
-            <div>
-                <label>SMTP password</label>
-                <input type="password" id="setSmtpPass" autocomplete="new-password" placeholder="Leave blank to keep current">
-            </div>
-            <div class="full">
-                <label>From email</label>
-                <input id="setSmtpFrom" value="<?= e($settings['smtp_from'] ?? '') ?>">
+            <div class="settings-pane">
+                <section class="settings-panel" data-panel="appearance">
+                    <h4>Theme</h4>
+                    <div class="theme-cards" id="themeToggle" role="radiogroup" aria-label="Theme">
+                        <button type="button" data-theme-opt="light">
+                            <span class="theme-thumb thumb-light"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
+                            <span class="theme-name"><i class="fa-solid fa-sun"></i> Light</span>
+                        </button>
+                        <button type="button" data-theme-opt="dark">
+                            <span class="theme-thumb thumb-dark"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
+                            <span class="theme-name"><i class="fa-solid fa-moon"></i> Dark</span>
+                        </button>
+                        <button type="button" data-theme-opt="system">
+                            <span class="theme-thumb thumb-system">
+                                <span class="tt-half thumb-light"><span class="tt-side"></span><span class="tt-main"><span></span><span></span></span></span>
+                                <span class="tt-half thumb-dark"><span class="tt-side"></span><span class="tt-main"><span></span><span></span></span></span>
+                            </span>
+                            <span class="theme-name"><i class="fa-solid fa-circle-half-stroke"></i> System</span>
+                        </button>
+                    </div>
+
+                    <h4>Accent color</h4>
+                    <div class="accent-row" id="accentRow" role="radiogroup" aria-label="Accent color">
+                        <?php foreach (['#6F5EE8', '#3F7FC2', '#2E9E8F', '#3D8F68', '#C98A2D', '#D65C7E', '#C75454', '#64748B'] as $accent): ?>
+                        <button type="button" data-accent="<?= $accent ?>" style="background:<?= $accent ?>" aria-label="<?= $accent ?>"></button>
+                        <?php endforeach ?>
+                    </div>
+                </section>
+
+                <section class="settings-panel hidden" data-panel="general">
+                    <h4>General</h4>
+                    <div class="settings-grid">
+                        <div class="full">
+                            <label>App name</label>
+                            <input id="setAppName" autocomplete="off" value="<?= e($settings['app_name'] ?? 'Memoir') ?>">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="settings-panel hidden" data-panel="email">
+                    <h4>Email (SMTP)</h4>
+                    <div class="settings-grid">
+                        <div>
+                            <label>SMTP host</label>
+                            <input id="setSmtpHost" autocomplete="off" value="<?= e($settings['smtp_host'] ?? '') ?>">
+                        </div>
+                        <div>
+                            <label>SMTP port</label>
+                            <input id="setSmtpPort" value="<?= e((string) ($settings['smtp_port'] ?? 587)) ?>">
+                        </div>
+                        <div>
+                            <label>Security</label>
+                            <select id="setSmtpSecurity">
+                                <option value="tls" <?= ($settings['smtp_security'] ?? '') === 'tls' ? 'selected' : '' ?>>TLS</option>
+                                <option value="ssl" <?= ($settings['smtp_security'] ?? '') === 'ssl' ? 'selected' : '' ?>>SSL</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>SMTP username</label>
+                            <input id="setSmtpUser" autocomplete="off" value="<?= e($settings['smtp_user'] ?? '') ?>">
+                        </div>
+                        <div>
+                            <label>SMTP password</label>
+                            <input type="password" id="setSmtpPass" autocomplete="new-password" placeholder="Leave blank to keep current">
+                        </div>
+                        <div class="full">
+                            <label>From email</label>
+                            <input id="setSmtpFrom" value="<?= e($settings['smtp_from'] ?? '') ?>">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="settings-panel hidden" data-panel="account">
+                    <h4>Change password</h4>
+                    <div class="settings-grid">
+                        <div class="full">
+                            <label>Current password</label>
+                            <input type="password" id="pwCurrent" autocomplete="current-password">
+                        </div>
+                        <div>
+                            <label>New password</label>
+                            <input type="password" id="pwNew" minlength="12" autocomplete="new-password">
+                        </div>
+                        <div>
+                            <label>Confirm new password</label>
+                            <input type="password" id="pwConfirm" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div class="pw-actions">
+                        <span id="pwStatus" class="pw-status"></span>
+                        <button type="button" class="primary-btn" id="changePassword">Update password</button>
+                    </div>
+                </section>
             </div>
         </div>
 
@@ -380,32 +464,32 @@ function note_preview(string $content): string {
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir <?= e(MEMOIR_VERSION) ?></span>
-                <h3 id="whatsNewTitle">A premium editor, tags, and links that remember</h3>
+                <h3 id="whatsNewTitle">Make Memoir yours</h3>
             </div>
         </div>
 
-        <p class="release-copy">This release turns the editor into a first-class writing tool and makes every view shareable and reload-proof.</p>
+        <p class="release-copy">This release brings a full dark mode and account controls to Settings.</p>
 
         <ul class="release-list">
             <li>
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <i class="fa-solid fa-moon"></i>
                 <div>
-                    <strong>Markdown, colors, and a format bubble</strong>
-                    <span>Type # for headings, - for lists or **bold** as you write, pick text and highlight colors, and format selections from a floating bubble.</span>
+                    <strong>Light, dark, and system themes</strong>
+                    <span>A hand-tuned dark palette across the whole app. Pick a mode in Settings — "System" follows your OS automatically.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-tag"></i>
+                <i class="fa-solid fa-shield-halved"></i>
                 <div>
-                    <strong>Tags</strong>
-                    <span>Tag notes with chips in the editor, filter from the sidebar tag cloud, and find tags through search.</span>
+                    <strong>Change your password</strong>
+                    <span>Update your password from Settings, protected by current-password verification.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-link"></i>
+                <i class="fa-solid fa-sliders"></i>
                 <div>
-                    <strong>Views that survive reloads</strong>
-                    <span>The open note, filters, and search live in the URL — reload, bookmark, or use back/forward and land right where you were.</span>
+                    <strong>Settings, organized</strong>
+                    <span>Appearance, General, Email, and Account now live in clear sections.</span>
                 </div>
             </li>
         </ul>

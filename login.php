@@ -39,6 +39,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Sign in — Memoir</title>
+    <script>
+    (function () {
+        try {
+            var choice = localStorage.getItem('memoir-theme') || 'system';
+            var dark = choice === 'dark' || (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+            var accent = localStorage.getItem('memoir-accent');
+            if (accent && /^#[0-9a-fA-F]{6}$/.test(accent)) {
+                document.documentElement.style.setProperty('--accent', accent);
+            }
+        } catch (e) {}
+    })();
+    </script>
     <link rel="icon" type="image/png" href="assets/img/favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
