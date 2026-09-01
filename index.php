@@ -756,7 +756,7 @@ function note_preview(string $content): string {
         </ul>
 
         <div class="modal-actions">
-            <a class="changelog-link" href="CHANGELOG.md" target="_blank" rel="noopener">Full changelog</a>
+            <a class="changelog-link" href="changelog.php" target="_blank" rel="noopener">Full changelog</a>
             <button data-close>Got it</button>
         </div>
     </div>
