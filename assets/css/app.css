@@ -1998,11 +1998,10 @@ html[data-mode="dark"] .folder-item.active {
 
 /* Bulk action bar docked under the note list */
 .bulk-bar {
-    display: flex;
-    align-items: center;
+    display: grid;
     gap: 8px;
     margin: 0 12px 12px;
-    padding: 9px 12px;
+    padding: 10px;
     background: #22241f;
     color: #e8e8e2;
     border-radius: 14px;
@@ -2010,26 +2009,54 @@ html[data-mode="dark"] .folder-item.active {
     animation: bubble-in .14s ease;
 }
 .bulk-bar.hidden { display: none; }
+.bulk-summary {
+    display: flex;
+    align-items: center;
+    min-height: 24px;
+    padding-left: 2px;
+}
 #bulkCount {
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     margin-right: auto;
+    white-space: nowrap;
+}
+.bulk-actions {
+    display: flex;
+    gap: 7px;
 }
 .bulk-bar button {
     border: 0;
     background: rgba(255, 255, 255, .1);
     color: inherit;
     border-radius: 8px;
-    padding: 6px 10px;
+    min-height: 36px;
+    padding: 6px 8px;
     font-size: 12px;
     font-weight: 600;
+    white-space: nowrap;
     transition: background .12s ease;
 }
+.bulk-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    gap: 6px;
+    min-width: 0;
+}
 .bulk-bar button:hover { background: rgba(255, 255, 255, .2); }
-.bulk-bar .bulk-danger { background: #b84a4a; }
+.bulk-bar .bulk-danger { flex-grow: 1.2; background: #b84a4a; }
 .bulk-bar .bulk-danger:hover { background: #c95656; }
 .bulk-bar .bulk-danger:disabled { opacity: .45; }
-#bulkCancel { background: transparent; padding: 6px 8px; }
+#bulkCancel {
+    display: grid;
+    place-items: center;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+    background: transparent;
+}
 html[data-theme="ocean"] .bulk-bar { background: #3a4553; }
 html[data-theme="midnight"] .bulk-bar { background: #1f1f1f; }
 

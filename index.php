@@ -216,11 +216,15 @@ function note_preview(string $content): string {
 
         <!-- Bulk actions shown while selecting notes -->
         <div class="bulk-bar hidden" id="bulkBar">
-            <span id="bulkCount">0 selected</span>
-            <button type="button" id="bulkSelectAll">Select all</button>
-            <button type="button" id="bulkRestore" class="hidden"><i class="fa-solid fa-rotate-left"></i> Restore</button>
-            <button type="button" id="bulkDelete" class="bulk-danger"><i class="fa-regular fa-trash-can"></i> <span id="bulkDeleteLabel">Delete</span></button>
-            <button type="button" id="bulkCancel" aria-label="Cancel selection"><i class="fa-solid fa-xmark"></i></button>
+            <div class="bulk-summary">
+                <span id="bulkCount">0 selected</span>
+                <button type="button" id="bulkCancel" aria-label="Cancel selection" title="Cancel selection"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="bulk-actions">
+                <button type="button" id="bulkSelectAll"><i class="fa-solid fa-check-double"></i> Select all</button>
+                <button type="button" id="bulkRestore" class="hidden"><i class="fa-solid fa-rotate-left"></i> Restore</button>
+                <button type="button" id="bulkDelete" class="bulk-danger"><i class="fa-regular fa-trash-can"></i> <span id="bulkDeleteLabel">Delete</span></button>
+            </div>
         </div>
     </section>
 
