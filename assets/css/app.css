@@ -2069,3 +2069,140 @@ html[data-mode="dark"] .select-mode .note-card::after { border-color: #55564e; }
     color: var(--accent);
     border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
+
+/* ==========================================================================
+   Tier 1: folder management, trash, note moving
+   ========================================================================== */
+
+/* Folder rows: the folder button plus a hover ... menu trigger */
+.folder-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.folder-row .folder-item {
+    flex: 1;
+    min-width: 0;
+}
+.folder-menu-btn {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    background: transparent;
+    border-radius: 7px;
+    color: #94958f;
+    opacity: 0;
+    transition: opacity .12s ease, background .12s ease;
+}
+.folder-row:hover .folder-menu-btn,
+.folder-menu-btn:focus-visible { opacity: 1; }
+.folder-menu-btn:hover {
+    background: rgba(255, 255, 255, .6);
+    color: var(--ink);
+}
+html[data-mode="dark"] .folder-menu-btn:hover { background: rgba(255, 255, 255, .08); }
+
+/* Generic small popover menu (folder options, folder picker) */
+.mini-menu {
+    position: fixed;
+    z-index: 60;
+    min-width: 170px;
+    max-height: 320px;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #ddd8cf;
+    border-radius: 12px;
+    padding: 5px;
+    box-shadow: 0 16px 46px rgba(25, 22, 15, .18);
+    animation: bubble-in .14s ease;
+}
+.mini-menu button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--ink);
+    transition: background .12s ease;
+}
+.mini-menu button i {
+    width: 15px;
+    text-align: center;
+    color: #94958f;
+}
+.mini-menu button:hover { background: #f2f0eb; }
+.mini-menu button.danger { color: #b04a4a; }
+.mini-menu button.danger i { color: #b04a4a; }
+.mini-menu button.danger:hover { background: #fdf0f0; }
+.mini-menu button.checked {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent);
+}
+.mini-menu button.checked i { color: var(--accent); }
+html[data-mode="dark"] .mini-menu {
+    background: #24251f;
+    border-color: #3a3b33;
+}
+html[data-mode="dark"] .mini-menu button:hover { background: rgba(255, 255, 255, .07); }
+html[data-mode="dark"] .mini-menu button.danger:hover { background: rgba(176, 74, 74, .15); }
+html[data-theme="ocean"] .mini-menu { background: #2f3844; border-color: #414d5d; }
+html[data-theme="midnight"] .mini-menu { background: #121212; border-color: #2a2a2a; }
+html[data-theme="sepia"] .mini-menu { background: #faf4e4; border-color: #d7c9a7; }
+
+/* Breadcrumb folder button */
+.crumb-btn {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    padding: 3px 7px;
+    margin-left: -7px;
+    border-radius: 7px;
+    transition: background .12s ease, color .12s ease;
+}
+.crumb-btn:hover {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent);
+}
+
+/* Trash banner across the top of a trashed note */
+.trash-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 24px;
+    background: color-mix(in srgb, #b04a4a 10%, var(--panel));
+    border-bottom: 1px solid color-mix(in srgb, #b04a4a 25%, transparent);
+    font-size: 12.5px;
+    color: var(--ink);
+}
+.trash-banner i { color: #b04a4a; }
+.trash-banner span { margin-right: auto; }
+.trash-banner button {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 6px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background .12s ease;
+}
+.trash-banner button:hover { background: color-mix(in srgb, var(--accent) 9%, var(--panel)); }
+.trash-banner button.danger {
+    color: #fff;
+    background: #b04a4a;
+    border-color: #b04a4a;
+}
+.trash-banner button.danger:hover { background: #c25555; }
+
+/* Read-only editor while a note sits in the trash */
+.editor-view.read-only .toolbar-wrap,
+.editor-view.read-only .tag-row,
+.editor-view.read-only .editor-actions { display: none; }
+.editor-view.read-only .rich-editor { opacity: .85; }

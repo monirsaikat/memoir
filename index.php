@@ -7,7 +7,7 @@ ensure_schema();
 $settings = db()->query("SELECT * FROM settings WHERE id=1")->fetch();
 
 $folders = db()->query(
-    "SELECT f.*, (SELECT COUNT(*) FROM notes n WHERE n.folder_id = f.id) note_count
+    "SELECT f.*, (SELECT COUNT(*) FROM notes n WHERE n.folder_id = f.id AND n.deleted_at IS NULL) note_count
      FROM folders f
      ORDER BY sort_order, name"
 )->fetchAll();
@@ -16,12 +16,15 @@ $notes = db()->query(
     "SELECT n.*, f.name folder_name
      FROM notes n
      LEFT JOIN folders f ON f.id = n.folder_id
+     WHERE n.deleted_at IS NULL
      ORDER BY n.is_pinned DESC, n.updated_at DESC
      LIMIT 100"
 )->fetchAll();
 
+$trashCount = (int) db()->query("SELECT COUNT(*) FROM notes WHERE deleted_at IS NOT NULL")->fetchColumn();
+
 $tagCounts = [];
-foreach (db()->query("SELECT tags FROM notes WHERE tags <> ''")->fetchAll() as $row) {
+foreach (db()->query("SELECT tags FROM notes WHERE tags <> '' AND deleted_at IS NULL")->fetchAll() as $row) {
     foreach (explode(',', $row['tags']) as $tag) {
         $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
     }
@@ -107,6 +110,11 @@ function note_preview(string $content): string {
                 <i class="fa-solid fa-thumbtack"></i>
                 <span>Pinned</span>
             </button>
+            <button class="nav-item" data-trash="1">
+                <i class="fa-regular fa-trash-can"></i>
+                <span>Trash</span>
+                <span class="count" id="trashCount"><?= $trashCount ?></span>
+            </button>
         </nav>
 
         <div class="section-title">
@@ -116,11 +124,16 @@ function note_preview(string $content): string {
 
         <div id="folderList" class="folder-list">
             <?php foreach ($folders as $folder): ?>
-            <button class="folder-item" data-folder="<?= $folder['id'] ?>">
-                <i class="fa-solid <?= e($folder['icon']) ?>" style="color:<?= e($folder['color']) ?>"></i>
-                <span><?= e($folder['name']) ?></span>
-                <span class="count"><?= $folder['note_count'] ?></span>
-            </button>
+            <div class="folder-row">
+                <button class="folder-item" data-folder="<?= $folder['id'] ?>">
+                    <i class="fa-solid <?= e($folder['icon']) ?>" style="color:<?= e($folder['color']) ?>"></i>
+                    <span><?= e($folder['name']) ?></span>
+                    <span class="count"><?= $folder['note_count'] ?></span>
+                </button>
+                <button class="folder-menu-btn" data-folder="<?= $folder['id'] ?>" type="button" aria-label="Folder options">
+                    <i class="fa-solid fa-ellipsis"></i>
+                </button>
+            </div>
             <?php endforeach ?>
         </div>
 
@@ -200,7 +213,8 @@ function note_preview(string $content): string {
         <div class="bulk-bar hidden" id="bulkBar">
             <span id="bulkCount">0 selected</span>
             <button type="button" id="bulkSelectAll">Select all</button>
-            <button type="button" id="bulkDelete" class="bulk-danger"><i class="fa-regular fa-trash-can"></i> Delete</button>
+            <button type="button" id="bulkRestore" class="hidden"><i class="fa-solid fa-rotate-left"></i> Restore</button>
+            <button type="button" id="bulkDelete" class="bulk-danger"><i class="fa-regular fa-trash-can"></i> <span id="bulkDeleteLabel">Delete</span></button>
             <button type="button" id="bulkCancel" aria-label="Cancel selection"><i class="fa-solid fa-xmark"></i></button>
         </div>
     </section>
@@ -214,12 +228,18 @@ function note_preview(string $content): string {
         </div>
 
         <div id="editorView" class="editor-view hidden">
+            <div class="trash-banner hidden" id="trashBanner">
+                <i class="fa-regular fa-trash-can"></i>
+                <span>This note is in the Trash.</span>
+                <button type="button" id="restoreNote">Restore</button>
+                <button type="button" id="destroyNote" class="danger">Delete forever</button>
+            </div>
             <header class="editor-head">
                 <button class="icon-btn mobile-only" id="backToList" type="button" aria-label="Back to notes">
                     <i class="fa-solid fa-arrow-left"></i>
                 </button>
                 <div class="crumb">
-                    <span id="crumbFolder">Unfiled</span>
+                    <button type="button" class="crumb-btn" id="crumbFolder" title="Move to folder">Unfiled</button>
                     <i class="fa-solid fa-chevron-right"></i>
                     <span id="saveStatus">Saved</span>
                 </div>
@@ -337,6 +357,17 @@ function note_preview(string $content): string {
     </main>
 
 </div>
+
+<!-- Popover: folder options (rename / reorder / delete) -->
+<div class="mini-menu hidden" id="folderMenu" role="menu">
+    <button type="button" data-fm="edit"><i class="fa-solid fa-pen"></i> Edit folder</button>
+    <button type="button" data-fm="up"><i class="fa-solid fa-arrow-up"></i> Move up</button>
+    <button type="button" data-fm="down"><i class="fa-solid fa-arrow-down"></i> Move down</button>
+    <button type="button" data-fm="delete" class="danger"><i class="fa-regular fa-trash-can"></i> Delete folder</button>
+</div>
+
+<!-- Popover: move the open note to a folder -->
+<div class="mini-menu hidden" id="folderPicker" role="menu"></div>
 
 <!-- Modal: create folder -->
 <div class="modal-backdrop hidden" id="folderModal">

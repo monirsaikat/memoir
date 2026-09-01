@@ -3,6 +3,21 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-09-01
+
+### Added
+
+- Trash: deleting notes (single or bulk) now moves them to a recoverable
+  Trash view with restore and delete-forever actions, a read-only banner on
+  trashed notes, and automatic purge after 30 days. Permanent deletion only
+  works on notes already in the trash.
+- Move notes between folders from the editor breadcrumb — click the folder
+  name to pick a new folder (or Unfiled).
+- Folder management: a hover menu on each sidebar folder to edit its name,
+  icon, and color, reorder it, or delete it (its notes move to Unfiled).
+- Sidebar counts (folders, All notes, tags, Trash) refresh live after every
+  change.
+
 ## [1.3.0] - 2026-09-01
 
 ### Added
@@ -130,6 +145,7 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
+[1.4.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.4.0
 [1.3.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.3.0
 [1.2.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.2.0
 [1.1.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.1.0

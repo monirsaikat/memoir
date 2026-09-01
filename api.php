@@ -87,7 +87,7 @@ case 'save-note':
     $stmt = db()->prepare(
         "UPDATE notes
          SET folder_id = ?, title = ?, content = ?, icon = ?, color = ?, tags = ?, is_pinned = ?, updated_at = NOW()
-         WHERE id = ?"
+         WHERE id = ? AND deleted_at IS NULL"
     );
     $stmt->execute([$folder, $title, $content, $icon, $color, $tags, $pinned, $id]);
 
@@ -97,11 +97,14 @@ case 'delete-note':
     require_method('POST');
     $data = request_json();
 
-    db()->prepare("DELETE FROM notes WHERE id = ?")->execute([(int) ($data['id'] ?? 0)]);
+    db()->prepare("UPDATE notes SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")
+        ->execute([(int) ($data['id'] ?? 0)]);
 
     json_response(['ok' => true]);
 
 case 'delete-notes':
+case 'restore-notes':
+case 'destroy-notes':
     require_method('POST');
     $data = request_json();
     $ids = array_values(array_unique(array_filter(
@@ -112,11 +115,19 @@ case 'delete-notes':
         json_response(['ok' => false, 'message' => 'No notes selected'], 422);
     }
     $ids = array_slice($ids, 0, 200);
-
     $placeholders = implode(',', array_fill(0, count($ids), '?'));
-    db()->prepare("DELETE FROM notes WHERE id IN ($placeholders)")->execute($ids);
 
-    json_response(['ok' => true, 'deleted' => count($ids)]);
+    if ($action === 'delete-notes') {
+        // Move to trash.
+        db()->prepare("UPDATE notes SET deleted_at = NOW() WHERE id IN ($placeholders) AND deleted_at IS NULL")->execute($ids);
+    } elseif ($action === 'restore-notes') {
+        db()->prepare("UPDATE notes SET deleted_at = NULL WHERE id IN ($placeholders)")->execute($ids);
+    } else {
+        // Permanent deletion is only possible for notes already in the trash.
+        db()->prepare("DELETE FROM notes WHERE id IN ($placeholders) AND deleted_at IS NOT NULL")->execute($ids);
+    }
+
+    json_response(['ok' => true, 'count' => count($ids)]);
 
 case 'folder':
     require_method('POST');
@@ -140,17 +151,64 @@ case 'folder':
         'color' => $color,
     ]);
 
+case 'rename-folder':
+    require_method('POST');
+    $data = request_json();
+
+    $id = (int) ($data['id'] ?? 0);
+    $name = mb_substr(trim((string) ($data['name'] ?? '')), 0, 120);
+    if (!$id || !$name) {
+        json_response(['ok' => false, 'message' => 'Folder name required'], 422);
+    }
+    $icon = preg_match('/^fa-[a-z0-9-]+$/', (string) ($data['icon'] ?? '')) ? $data['icon'] : 'fa-folder';
+    $color = preg_match('/^#[A-Fa-f0-9]{6}$/', (string) ($data['color'] ?? '')) ? $data['color'] : '#6F5EE8';
+
+    db()->prepare("UPDATE folders SET name = ?, icon = ?, color = ? WHERE id = ?")
+        ->execute([$name, $icon, $color, $id]);
+
+    json_response(['ok' => true, 'id' => $id, 'name' => $name, 'icon' => $icon, 'color' => $color]);
+
+case 'delete-folder':
+    require_method('POST');
+    $data = request_json();
+    $id = (int) ($data['id'] ?? 0);
+    if (!$id) {
+        json_response(['ok' => false, 'message' => 'Unknown folder'], 422);
+    }
+    // The foreign key moves the folder's notes to Unfiled (folder_id NULL).
+    db()->prepare("DELETE FROM folders WHERE id = ?")->execute([$id]);
+
+    json_response(['ok' => true]);
+
+case 'reorder-folders':
+    require_method('POST');
+    $data = request_json();
+    $ids = array_values(array_filter(
+        array_map('intval', (array) ($data['ids'] ?? [])),
+        static fn (int $id): bool => $id > 0
+    ));
+    if (!$ids) {
+        json_response(['ok' => false, 'message' => 'No folders given'], 422);
+    }
+    $stmt = db()->prepare("UPDATE folders SET sort_order = ? WHERE id = ?");
+    foreach ($ids as $i => $folderId) {
+        $stmt->execute([$i + 1, $folderId]);
+    }
+
+    json_response(['ok' => true]);
+
 case 'search':
     require_method('GET');
     $q = trim($_GET['q'] ?? '');
     $folder = $_GET['folder'] ?? '';
     $pinned = $_GET['pinned'] ?? '';
     $tag = trim($_GET['tag'] ?? '');
+    $trash = ($_GET['trash'] ?? '') === '1';
 
-    $sql = "SELECT n.id, n.folder_id, n.title, n.content, n.icon, n.color, n.tags, n.is_pinned, n.updated_at, f.name folder_name
+    $sql = "SELECT n.id, n.folder_id, n.title, n.content, n.icon, n.color, n.tags, n.is_pinned, n.deleted_at, n.updated_at, f.name folder_name
             FROM notes n
             LEFT JOIN folders f ON f.id = n.folder_id
-            WHERE 1=1";
+            WHERE n.deleted_at IS " . ($trash ? "NOT NULL" : "NULL");
     $params = [];
 
     if ($q !== '') {
@@ -177,16 +235,30 @@ case 'search':
 
     json_response(['ok' => true, 'notes' => $stmt->fetchAll()]);
 
-case 'tags':
+case 'sidebar':
     require_method('GET');
-    $counts = [];
-    foreach (db()->query("SELECT tags FROM notes WHERE tags <> ''")->fetchAll() as $row) {
+    $tagCounts = [];
+    foreach (db()->query("SELECT tags FROM notes WHERE tags <> '' AND deleted_at IS NULL")->fetchAll() as $row) {
         foreach (explode(',', $row['tags']) as $tag) {
-            $counts[$tag] = ($counts[$tag] ?? 0) + 1;
+            $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
         }
     }
-    ksort($counts, SORT_NATURAL | SORT_FLAG_CASE);
-    json_response(['ok' => true, 'tags' => $counts]);
+    ksort($tagCounts, SORT_NATURAL | SORT_FLAG_CASE);
+
+    $folderCounts = db()->query(
+        "SELECT f.id, COUNT(n.id) c
+         FROM folders f
+         LEFT JOIN notes n ON n.folder_id = f.id AND n.deleted_at IS NULL
+         GROUP BY f.id"
+    )->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    json_response([
+        'ok' => true,
+        'tags' => $tagCounts,
+        'folders' => $folderCounts,
+        'all' => (int) db()->query("SELECT COUNT(*) FROM notes WHERE deleted_at IS NULL")->fetchColumn(),
+        'trash' => (int) db()->query("SELECT COUNT(*) FROM notes WHERE deleted_at IS NOT NULL")->fetchColumn(),
+    ]);
 
 case 'upload':
     require_method('POST');

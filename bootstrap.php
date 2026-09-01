@@ -105,6 +105,11 @@ function ensure_schema(): void {
         if (!db()->query("SHOW COLUMNS FROM users LIKE 'reset_token'")->fetch()) {
             db()->exec("ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) NULL, ADD COLUMN reset_expires DATETIME NULL");
         }
+        if (!db()->query("SHOW COLUMNS FROM notes LIKE 'deleted_at'")->fetch()) {
+            db()->exec("ALTER TABLE notes ADD COLUMN deleted_at DATETIME NULL, ADD INDEX(deleted_at)");
+        }
+        // Trashed notes are purged for good after 30 days.
+        db()->exec("DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)");
     } catch (Throwable) {
         // Fresh installs get the columns from the installer schema.
     }

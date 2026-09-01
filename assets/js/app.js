@@ -21,6 +21,7 @@
   let filterFolder = '';     // active folder filter ('' = all)
   let filterTag = '';        // active tag filter ('' = none)
   let pinnedOnly = false;    // "Pinned" nav filter
+  let trashView = false;     // showing the trash instead of live notes
   let saveTimer = null;      // debounce timer for autosave
   let draftStyle = { icon: 'fa-note-sticky', color: '#6F5EE8' };
   let currentTags = [];      // tags of the open note
@@ -88,6 +89,7 @@
     $('#pinNote').classList.toggle('active', current.is_pinned == 1);
     currentTags = (current.tags || '').split(',').filter(Boolean);
     renderTagChips();
+    setEditorReadOnly(!!current.deleted_at);
     updateWords();
     highlightCode();
 
@@ -99,11 +101,20 @@
     syncUrl(push);
   }
 
+  // Trashed notes open read-only, with a banner offering restore/destroy.
+  function setEditorReadOnly(readOnly) {
+    $('#noteContent').contentEditable = readOnly ? 'false' : 'true';
+    $('#noteTitle').readOnly = readOnly;
+    $('#editorView').classList.toggle('read-only', readOnly);
+    $('#trashBanner').classList.toggle('hidden', !readOnly);
+  }
+
   function closeEditor() {
     current = null;
     $('#editorView').classList.add('hidden');
     $('#emptyState').classList.remove('hidden');
     document.body.classList.remove('editor-open');
+    setEditorReadOnly(false);
   }
 
   async function refreshList() {
@@ -112,6 +123,7 @@
     if (filterFolder !== '') query += `&folder=${encodeURIComponent(filterFolder)}`;
     if (filterTag !== '') query += `&tag=${encodeURIComponent(filterTag)}`;
     if (pinnedOnly) query += '&pinned=1';
+    if (trashView) query += '&trash=1';
 
     const d = await api('search', { query });
     renderNotes(d.notes);
@@ -165,7 +177,7 @@
       await api('save-note', { method: 'POST', body: JSON.stringify(body) });
       $('#saveStatus').textContent = 'Saved';
       await refreshList();
-      refreshTagSidebar();
+      refreshSidebar();
     } catch (e) {
       $('#saveStatus').textContent = 'Save failed';
     }
@@ -232,12 +244,26 @@
   $('#bulkDelete').onclick = async () => {
     if (!selectedIds.size) return;
     const n = selectedIds.size;
-    if (!confirm(`Delete ${n} note${n > 1 ? 's' : ''} permanently?`)) return;
-    await api('delete-notes', { method: 'POST', body: JSON.stringify({ ids: [...selectedIds] }) });
+    if (trashView) {
+      // Out of the trash there is no way back.
+      if (!confirm(`Delete ${n} note${n > 1 ? 's' : ''} forever? This cannot be undone.`)) return;
+      await api('destroy-notes', { method: 'POST', body: JSON.stringify({ ids: [...selectedIds] }) });
+    } else {
+      await api('delete-notes', { method: 'POST', body: JSON.stringify({ ids: [...selectedIds] }) });
+    }
     if (current && selectedIds.has(String(current.id))) closeEditor();
     setSelectMode(false);
     await refreshList();
-    refreshTagSidebar();
+    refreshSidebar();
+  };
+
+  $('#bulkRestore').onclick = async () => {
+    if (!selectedIds.size) return;
+    await api('restore-notes', { method: 'POST', body: JSON.stringify({ ids: [...selectedIds] }) });
+    if (current && selectedIds.has(String(current.id))) closeEditor();
+    setSelectMode(false);
+    await refreshList();
+    refreshSidebar();
   };
 
   $('#newNote').onclick = async () => {
@@ -264,11 +290,30 @@
     queueSave();
   };
 
+  // Deleting moves the note to the trash (recoverable), so no confirm.
   $('#deleteNote').onclick = async () => {
-    if (!current || !confirm('Delete this note permanently?')) return;
+    if (!current) return;
     await api('delete-note', { method: 'POST', body: JSON.stringify({ id: current.id }) });
     closeEditor();
     await refreshList();
+    refreshSidebar();
+  };
+
+  $('#restoreNote').onclick = async () => {
+    if (!current) return;
+    await api('restore-notes', { method: 'POST', body: JSON.stringify({ ids: [current.id] }) });
+    const id = current.id;
+    await refreshList();
+    refreshSidebar();
+    await loadNote(id, false);
+  };
+
+  $('#destroyNote').onclick = async () => {
+    if (!current || !confirm('Delete this note forever? This cannot be undone.')) return;
+    await api('destroy-notes', { method: 'POST', body: JSON.stringify({ ids: [current.id] }) });
+    closeEditor();
+    await refreshList();
+    refreshSidebar();
   };
 
   // ---------------------------------------------------------------------
@@ -283,13 +328,21 @@
     $$('.nav-item,.folder-item,.tag-item').forEach(x => x.classList.remove('active'));
   }
 
+  // Entering or leaving the trash reshapes the bulk actions.
+  function applyTrashModeUi() {
+    $('#bulkRestore').classList.toggle('hidden', !trashView);
+    $('#bulkDeleteLabel').textContent = trashView ? 'Delete forever' : 'Delete';
+  }
+
   $$('.nav-item').forEach(btn => btn.onclick = () => {
     filterFolder = btn.dataset.folder ?? '';
     filterTag = '';
     pinnedOnly = btn.dataset.pinned === '1';
+    trashView = btn.dataset.trash === '1';
+    applyTrashModeUi();
     clearFilterHighlights();
     btn.classList.add('active');
-    $('#listTitle').textContent = pinnedOnly ? 'Pinned' : 'All notes';
+    $('#listTitle').textContent = trashView ? 'Trash' : (pinnedOnly ? 'Pinned' : 'All notes');
     closeSidebar();
     syncUrl(true);
     refreshList();
@@ -301,6 +354,8 @@
     filterFolder = btn.dataset.folder;
     filterTag = '';
     pinnedOnly = false;
+    trashView = false;
+    applyTrashModeUi();
     clearFilterHighlights();
     btn.classList.add('active');
     $('#listTitle').textContent = btn.querySelector('span').textContent;
@@ -327,14 +382,21 @@
     queueSave();
   }
 
-  async function refreshTagSidebar() {
+  // Refresh every sidebar count in one round trip: tags, folders, all, trash.
+  async function refreshSidebar() {
     try {
-      const d = await api('tags');
+      const d = await api('sidebar');
       const entries = Object.entries(d.tags);
       $('#tagSectionTitle').hidden = !entries.length;
       $('#tagList').innerHTML = entries.map(([t, c]) =>
         `<button class="tag-item ${filterTag === t ? 'active' : ''}" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}<span class="count">${c}</span></button>`
       ).join('');
+      Object.entries(d.folders).forEach(([id, c]) => {
+        const count = $(`.folder-item[data-folder="${CSS.escape(id)}"] .count`);
+        if (count) count.textContent = c;
+      });
+      $('.nav-item[data-folder=""] .count').textContent = d.all;
+      $('#trashCount').textContent = d.trash;
     } catch {}
   }
 
@@ -370,6 +432,8 @@
     filterTag = btn.dataset.tag;
     filterFolder = '';
     pinnedOnly = false;
+    trashView = false;
+    applyTrashModeUi();
     clearFilterHighlights();
     btn.classList.add('active');
     $('#listTitle').textContent = `#${filterTag}`;
@@ -407,6 +471,7 @@
     if (e.key === 'Escape') {
       $$('.modal-backdrop:not(.hidden)').forEach(closeModal);
       if (selectMode) setSelectMode(false);
+      closeMiniMenus();
     }
   });
 
@@ -1256,8 +1321,29 @@
   // New folder modal
   let folderIcon = 'fa-folder';
   let folderColor = '#6F5EE8';
+  let editingFolderId = null;   // set while the folder modal edits, not creates
 
-  $('#addFolder').onclick = () => openModal('#folderModal');
+  function openFolderModal(row = null) {
+    editingFolderId = row ? row.querySelector('.folder-item').dataset.folder : null;
+    $('#folderModalTitle').textContent = editingFolderId ? 'Edit folder' : 'New folder';
+    $('#saveFolder').textContent = editingFolderId ? 'Save folder' : 'Create folder';
+    $$('#folderIcons button, #folderColors button').forEach(b => b.classList.remove('selected'));
+    if (row) {
+      const item = row.querySelector('.folder-item');
+      $('#folderName').value = item.querySelector('span').textContent;
+      const icon = [...item.querySelector('i').classList].find(c => c.startsWith('fa-') && c !== 'fa-solid');
+      folderIcon = icon || 'fa-folder';
+      folderColor = item.querySelector('i').style.color || '#6F5EE8';
+      $(`#folderIcons button[data-icon="${CSS.escape(folderIcon)}"]`)?.classList.add('selected');
+    } else {
+      $('#folderName').value = '';
+      folderIcon = 'fa-folder';
+      folderColor = '#6F5EE8';
+    }
+    openModal('#folderModal');
+  }
+
+  $('#addFolder').onclick = () => openFolderModal();
 
   $('#folderIcons').onclick = e => {
     const btn = e.target.closest('button');
@@ -1275,17 +1361,142 @@
     btn.classList.add('selected');
   };
 
+  function folderRowHtml(d, count = 0) {
+    return `<div class="folder-row">
+      <button class="folder-item" data-folder="${d.id}"><i class="fa-solid ${d.icon}" style="color:${d.color}"></i><span>${escapeHtml(d.name)}</span><span class="count">${count}</span></button>
+      <button class="folder-menu-btn" data-folder="${d.id}" type="button" aria-label="Folder options"><i class="fa-solid fa-ellipsis"></i></button>
+    </div>`;
+  }
+
   $('#saveFolder').onclick = async () => {
     const name = $('#folderName').value.trim();
     if (!name) return;
-    const d = await api('folder', {
-      method: 'POST',
-      body: JSON.stringify({ name, icon: folderIcon, color: folderColor }),
-    });
-    $('#folderList').insertAdjacentHTML('beforeend', `<button class="folder-item" data-folder="${d.id}"><i class="fa-solid ${d.icon}" style="color:${d.color}"></i><span>${escapeHtml(d.name)}</span><span class="count">0</span></button>`);
+    const payload = { name, icon: folderIcon, color: folderColor };
+    if (editingFolderId) {
+      const d = await api('rename-folder', {
+        method: 'POST',
+        body: JSON.stringify({ id: editingFolderId, ...payload }),
+      });
+      const item = $(`.folder-item[data-folder="${CSS.escape(String(d.id))}"]`);
+      if (item) {
+        item.querySelector('span').textContent = d.name;
+        item.querySelector('i').className = `fa-solid ${d.icon}`;
+        item.querySelector('i').style.color = d.color;
+      }
+      if (current && String(current.folder_id) === String(d.id)) {
+        current.folder_name = d.name;
+        $('#crumbFolder').textContent = d.name;
+      }
+    } else {
+      const d = await api('folder', { method: 'POST', body: JSON.stringify(payload) });
+      $('#folderList').insertAdjacentHTML('beforeend', folderRowHtml(d));
+    }
     $('#folderName').value = '';
     closeModal($('#folderModal'));
   };
+
+  // Folder ... menu: edit, reorder, delete.
+  const folderMenu = $('#folderMenu');
+  let folderMenuRow = null;
+
+  function closeMiniMenus() {
+    folderMenu.classList.add('hidden');
+    folderPicker.classList.add('hidden');
+  }
+
+  function openMiniMenu(menu, anchor) {
+    menu.classList.remove('hidden');
+    const rect = anchor.getBoundingClientRect();
+    const top = Math.min(rect.bottom + 6, innerHeight - menu.offsetHeight - 10);
+    const left = Math.min(Math.max(rect.left, 10), innerWidth - menu.offsetWidth - 10);
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
+  }
+
+  $('#folderList').addEventListener('click', e => {
+    const btn = e.target.closest('.folder-menu-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    folderMenuRow = btn.closest('.folder-row');
+    openMiniMenu(folderMenu, btn);
+  });
+
+  folderMenu.addEventListener('click', async e => {
+    const btn = e.target.closest('button[data-fm]');
+    if (!btn || !folderMenuRow) return;
+    const row = folderMenuRow;
+    const id = row.querySelector('.folder-item').dataset.folder;
+    const name = row.querySelector('.folder-item span').textContent;
+    closeMiniMenus();
+
+    switch (btn.dataset.fm) {
+      case 'edit':
+        openFolderModal(row);
+        break;
+      case 'up':
+      case 'down': {
+        const sibling = btn.dataset.fm === 'up' ? row.previousElementSibling : row.nextElementSibling;
+        if (!sibling) break;
+        btn.dataset.fm === 'up' ? sibling.before(row) : sibling.after(row);
+        const ids = $$('#folderList .folder-item').map(f => f.dataset.folder);
+        await api('reorder-folders', { method: 'POST', body: JSON.stringify({ ids }) });
+        break;
+      }
+      case 'delete': {
+        if (!confirm(`Delete the folder "${name}"? Its notes move to Unfiled.`)) break;
+        await api('delete-folder', { method: 'POST', body: JSON.stringify({ id }) });
+        row.remove();
+        if (filterFolder === id) {
+          filterFolder = '';
+          clearFilterHighlights();
+          $('.nav-item[data-folder=""]')?.classList.add('active');
+          $('#listTitle').textContent = 'All notes';
+        }
+        if (current && String(current.folder_id) === String(id)) {
+          current.folder_id = null;
+          current.folder_name = null;
+          $('#crumbFolder').textContent = 'Unfiled';
+        }
+        await refreshList();
+        refreshSidebar();
+        break;
+      }
+    }
+  });
+
+  // Breadcrumb folder picker: move the open note to another folder.
+  const folderPicker = $('#folderPicker');
+
+  $('#crumbFolder').onclick = e => {
+    if (!current || current.deleted_at) return;
+    const folders = $$('#folderList .folder-item').map(f => ({
+      id: f.dataset.folder,
+      name: f.querySelector('span').textContent,
+    }));
+    const items = [{ id: '', name: 'Unfiled' }, ...folders];
+    folderPicker.innerHTML = items.map(f =>
+      `<button type="button" data-pick="${f.id}" class="${String(current.folder_id ?? '') === f.id ? 'checked' : ''}">
+        <i class="fa-solid ${f.id === '' ? 'fa-inbox' : 'fa-folder'}"></i> ${escapeHtml(f.name)}
+      </button>`
+    ).join('');
+    openMiniMenu(folderPicker, e.currentTarget);
+  };
+
+  folderPicker.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-pick]');
+    if (!btn || !current) return;
+    const id = btn.dataset.pick;
+    current.folder_id = id === '' ? null : id;
+    current.folder_name = id === '' ? null : btn.textContent.trim();
+    $('#crumbFolder').textContent = current.folder_name || 'Unfiled';
+    closeMiniMenus();
+    queueSave();
+  });
+
+  document.addEventListener('pointerdown', e => {
+    if (e.target.closest('#folderMenu, #folderPicker, .folder-menu-btn, #crumbFolder')) return;
+    closeMiniMenus();
+  });
 
   // Note appearance modal
   $('#noteStyle').onclick = () => openModal('#styleModal');
@@ -1461,9 +1672,10 @@
   function syncUrl(push = false) {
     const params = new URLSearchParams();
     if (current) params.set('note', current.id);
-    if (filterTag !== '') params.set('tag', filterTag);
+    if (trashView) params.set('trash', '1');
+    else if (filterTag !== '') params.set('tag', filterTag);
     else if (filterFolder !== '') params.set('folder', filterFolder);
-    if (pinnedOnly) params.set('pinned', '1');
+    if (pinnedOnly && !trashView) params.set('pinned', '1');
     const q = searchInput.value.trim();
     if (q) params.set('q', q);
 
@@ -1483,9 +1695,14 @@
     filterFolder = params.get('folder') || '';
     filterTag = params.get('tag') || '';
     pinnedOnly = params.get('pinned') === '1';
+    trashView = params.get('trash') === '1';
+    applyTrashModeUi();
 
     clearFilterHighlights();
-    if (filterTag) {
+    if (trashView) {
+      $('.nav-item[data-trash="1"]')?.classList.add('active');
+      $('#listTitle').textContent = 'Trash';
+    } else if (filterTag) {
       $(`.tag-item[data-tag="${CSS.escape(filterTag)}"]`)?.classList.add('active');
       $('#listTitle').textContent = `#${filterTag}`;
     } else if (filterFolder) {
