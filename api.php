@@ -101,6 +101,23 @@ case 'delete-note':
 
     json_response(['ok' => true]);
 
+case 'delete-notes':
+    require_method('POST');
+    $data = request_json();
+    $ids = array_values(array_unique(array_filter(
+        array_map('intval', (array) ($data['ids'] ?? [])),
+        static fn (int $id): bool => $id > 0
+    )));
+    if (!$ids) {
+        json_response(['ok' => false, 'message' => 'No notes selected'], 422);
+    }
+    $ids = array_slice($ids, 0, 200);
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    db()->prepare("DELETE FROM notes WHERE id IN ($placeholders)")->execute($ids);
+
+    json_response(['ok' => true, 'deleted' => count($ids)]);
+
 case 'folder':
     require_method('POST');
     $data = request_json();

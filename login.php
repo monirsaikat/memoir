@@ -43,8 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     (function () {
         try {
             var choice = localStorage.getItem('memoir-theme') || 'system';
-            var dark = choice === 'dark' || (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-            document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+            var darkFlavors = { dark: 1, ocean: 1, midnight: 1 };
+            if (choice === 'system') {
+                choice = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (!/^(light|dark|sepia|ocean|midnight)$/.test(choice)) choice = 'light';
+            document.documentElement.dataset.theme = choice;
+            document.documentElement.dataset.mode = darkFlavors[choice] ? 'dark' : 'light';
             var accent = localStorage.getItem('memoir-accent');
             if (accent && /^#[0-9a-fA-F]{6}$/.test(accent)) {
                 document.documentElement.style.setProperty('--accent', accent);

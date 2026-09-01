@@ -3,13 +3,35 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
-## [1.1.1] - 2026-09-01
+## [1.2.0] - 2026-09-01
 
 ### Added
 
+- Bulk note management: a select mode (toolbar button, Ctrl/Cmd+click, or Esc
+  to exit) with per-card check circles, select-all, and one-shot deletion of
+  up to 200 notes.
+- Modern visual pass: accent-colored New note button and sidebar active
+  pills, note cards that lift on hover, and modal entrance animations — all
+  honoring reduced-motion preferences.
+- Syntax highlighting in code blocks (highlight.js): language auto-detection
+  across 14 common languages, palettes that follow the light/dark theme mode,
+  caret-safe re-highlighting while editing, and clean storage — highlight
+  markup is stripped on save and rebuilt on load.
+- Full heading support: H1 through H6 via markdown (`#` … `######` + space)
+  and a toolbar heading dropdown that shows the caret's current level, with
+  distinct typography for every level.
+- Tables in the editor: insert a table from the toolbar, Tab/Shift+Tab to move
+  between cells (Tab past the last cell adds a row), and a floating table menu
+  with add/remove row and column and delete-table actions.
+- Task lists: checkbox items via the toolbar or by typing `[]` + space, with
+  click-to-toggle checkboxes, strike-through on completion, and safe
+  persistence through the sanitizer.
 - Theme switching: light, dark, and system modes with a full dark palette
   across the app and sign-in page. The choice is remembered per browser and
   applied before first paint, and "system" follows the OS live.
+- Three premium theme flavors: Sepia (warm paper), Ocean (Nordic slate blue),
+  and Midnight (true-black OLED), each with its own preview card and full
+  palette across every surface, and all compatible with any accent color.
 - Accent colors: eight selectable accents that instantly re-tint the whole
   interface (buttons, chips, highlights, selection) via a single CSS variable.
 - Password change in Settings, protected by current-password verification,
@@ -96,6 +118,6 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[1.1.1]: https://github.com/monirsaikat/memoir/releases/tag/v1.1.1
+[1.2.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.2.0
 [1.1.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.1.0
 [1.0.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.0.0

@@ -116,7 +116,7 @@ function json_response(array $data, int $status=200): never {
 
 function sanitize_note_html(string $html): string {
     if ($html === '') return '';
-    $allowedTags = ['p','br','div','hr','h2','h3','strong','b','em','i','u','s','span','ul','ol','li','blockquote','pre','code','a','img'];
+    $allowedTags = ['p','br','div','hr','h1','h2','h3','h4','h5','h6','strong','b','em','i','u','s','span','ul','ol','li','blockquote','pre','code','a','img','table','thead','tbody','tr','th','td'];
     $document = new DOMDocument('1.0', 'UTF-8');
     $previous = libxml_use_internal_errors(true);
     $document->loadHTML('<?xml encoding="utf-8" ?><div id="memoir-root">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
@@ -152,6 +152,11 @@ function sanitize_note_html(string $html): string {
                 if (preg_match('#^(https?://|/|uploads/)#i', $src)) $kept['src'] = $src;
                 $alt = mb_substr($child->getAttribute('alt'), 0, 200);
                 if ($alt !== '') $kept['alt'] = $alt;
+            } elseif ($tag === 'ul') {
+                if ($child->getAttribute('class') === 'checklist') $kept['class'] = 'checklist';
+            } elseif ($tag === 'li') {
+                $checked = $child->getAttribute('data-checked');
+                if ($checked === '0' || $checked === '1') $kept['data-checked'] = $checked;
             } elseif ($tag === 'span') {
                 // Only hex text/highlight colors survive; everything else is dropped.
                 $style = strtolower(str_replace(' ', '', $child->getAttribute('style')));
