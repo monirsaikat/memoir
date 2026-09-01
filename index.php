@@ -50,8 +50,13 @@ function note_preview(string $content): string {
     (function () {
         try {
             var choice = localStorage.getItem('memoir-theme') || 'system';
-            var dark = choice === 'dark' || (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-            document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+            var darkFlavors = { dark: 1, ocean: 1, midnight: 1 };
+            if (choice === 'system') {
+                choice = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (!/^(light|dark|sepia|ocean|midnight)$/.test(choice)) choice = 'light';
+            document.documentElement.dataset.theme = choice;
+            document.documentElement.dataset.mode = darkFlavors[choice] ? 'dark' : 'light';
             var accent = localStorage.getItem('memoir-accent');
             if (accent && /^#[0-9a-fA-F]{6}$/.test(accent)) {
                 document.documentElement.style.setProperty('--accent', accent);
@@ -64,6 +69,16 @@ function note_preview(string $content): string {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" id="hlThemeLight" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+    <link rel="stylesheet" id="hlThemeDark" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script>
+    // Keep only the highlight palette matching the active theme mode.
+    (function () {
+        var dark = document.documentElement.dataset.mode === 'dark';
+        document.getElementById('hlThemeLight').disabled = dark;
+        document.getElementById('hlThemeDark').disabled = !dark;
+    })();
+    </script>
     <link rel="stylesheet" href="<?= asset('assets/css/app.css') ?>">
 </head>
 <body>
@@ -138,9 +153,14 @@ function note_preview(string $content): string {
                 <h1 id="listTitle">All notes</h1>
                 <span id="listCount"><?= count($notes) ?> notes</span>
             </div>
-            <button id="collapseSidebar" class="icon-btn mobile-only" type="button" aria-label="Open navigation">
-                <i class="fa-solid fa-bars"></i>
-            </button>
+            <div class="list-head-actions">
+                <button id="selectModeBtn" class="icon-btn" type="button" title="Select notes">
+                    <i class="fa-solid fa-check-double"></i>
+                </button>
+                <button id="collapseSidebar" class="icon-btn mobile-only" type="button" aria-label="Open navigation">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
         </div>
 
         <div class="search-wrap">
@@ -174,6 +194,14 @@ function note_preview(string $content): string {
                 </div>
             </button>
             <?php endforeach ?>
+        </div>
+
+        <!-- Bulk actions shown while selecting notes -->
+        <div class="bulk-bar hidden" id="bulkBar">
+            <span id="bulkCount">0 selected</span>
+            <button type="button" id="bulkSelectAll">Select all</button>
+            <button type="button" id="bulkDelete" class="bulk-danger"><i class="fa-regular fa-trash-can"></i> Delete</button>
+            <button type="button" id="bulkCancel" aria-label="Cancel selection"><i class="fa-solid fa-xmark"></i></button>
         </div>
     </section>
 
@@ -226,13 +254,15 @@ function note_preview(string $content): string {
                         </div>
                         <span class="tool-sep"></span>
                         <div class="tool-group">
-                            <button type="button" class="tool-label" data-block="h2" title="Heading (# + space)">H2</button>
-                            <button type="button" class="tool-label" data-block="h3" title="Subheading (## + space)">H3</button>
+                            <button type="button" class="tool-label" id="headingBtn" title="Headings (# … ###### + space)">
+                                <span id="headingLabel">H</span><i class="fa-solid fa-chevron-down heading-caret"></i>
+                            </button>
                         </div>
                         <span class="tool-sep"></span>
                         <div class="tool-group">
                             <button type="button" data-cmd="insertUnorderedList" data-state="insertUnorderedList" title="Bullet list (- + space)"><i class="fa-solid fa-list-ul"></i></button>
                             <button type="button" data-cmd="insertOrderedList" data-state="insertOrderedList" title="Numbered list (1. + space)"><i class="fa-solid fa-list-ol"></i></button>
+                            <button type="button" id="checklistBtn" title="Task list ([] + space)"><i class="fa-solid fa-list-check"></i></button>
                             <button type="button" data-cmd="formatBlock" data-value="blockquote" title="Quote (&gt; + space)"><i class="fa-solid fa-quote-left"></i></button>
                             <button type="button" data-cmd="formatBlock" data-value="pre" title="Code block (``` + Enter)"><i class="fa-solid fa-code"></i></button>
                         </div>
@@ -245,6 +275,7 @@ function note_preview(string $content): string {
                         <div class="tool-group">
                             <button type="button" id="insertLink" title="Insert link"><i class="fa-solid fa-link"></i></button>
                             <button type="button" id="insertImage" title="Insert image"><i class="fa-regular fa-image"></i></button>
+                            <button type="button" id="insertTableBtn" title="Insert table"><i class="fa-solid fa-table"></i></button>
                             <button type="button" data-cmd="insertHorizontalRule" title="Divider (--- + Enter)"><i class="fa-solid fa-minus"></i></button>
                         </div>
                         <span class="tool-sep"></span>
@@ -252,6 +283,17 @@ function note_preview(string $content): string {
                             <button type="button" data-cmd="removeFormat" title="Clear formatting"><i class="fa-solid fa-eraser"></i></button>
                         </div>
                         <input type="file" id="imageInput" accept="image/*" hidden>
+                    </div>
+
+                    <!-- Heading picker; anchored below the H button by JS -->
+                    <div class="heading-sheet hidden" id="headingSheet" role="menu">
+                        <button type="button" data-h="p"><span class="hs-normal">Normal text</span></button>
+                        <?php for ($level = 1; $level <= 6; $level++): ?>
+                        <button type="button" data-h="h<?= $level ?>">
+                            <span class="hs-h<?= $level ?>">Heading <?= $level ?></span>
+                            <kbd><?= str_repeat('#', $level) ?></kbd>
+                        </button>
+                        <?php endfor ?>
                     </div>
 
                     <!-- Color picker sheet; anchored below its toolbar button by JS -->
@@ -281,6 +323,16 @@ function note_preview(string $content): string {
             <button type="button" id="bubbleLink" title="Link"><i class="fa-solid fa-link"></i></button>
             <button type="button" id="bubbleHighlight" title="Highlight"><i class="fa-solid fa-highlighter"></i></button>
             <button type="button" data-bcmd="removeFormat" title="Clear formatting"><i class="fa-solid fa-eraser"></i></button>
+        </div>
+
+        <!-- Table tools shown while the caret is inside a table -->
+        <div class="table-menu hidden" id="tableMenu" role="toolbar" aria-label="Table tools">
+            <button type="button" data-tbl="addRow" title="Add row below">+ Row</button>
+            <button type="button" data-tbl="addCol" title="Add column right">+ Col</button>
+            <button type="button" data-tbl="delRow" title="Delete row">&minus; Row</button>
+            <button type="button" data-tbl="delCol" title="Delete column">&minus; Col</button>
+            <span class="b-sep"></span>
+            <button type="button" data-tbl="delTable" title="Delete table"><i class="fa-regular fa-trash-can"></i></button>
         </div>
     </main>
 
@@ -371,6 +423,18 @@ function note_preview(string $content): string {
                                 <span class="tt-half thumb-dark"><span class="tt-side"></span><span class="tt-main"><span></span><span></span></span></span>
                             </span>
                             <span class="theme-name"><i class="fa-solid fa-circle-half-stroke"></i> System</span>
+                        </button>
+                        <button type="button" data-theme-opt="sepia">
+                            <span class="theme-thumb thumb-sepia"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
+                            <span class="theme-name"><i class="fa-solid fa-mug-saucer"></i> Sepia</span>
+                        </button>
+                        <button type="button" data-theme-opt="ocean">
+                            <span class="theme-thumb thumb-ocean"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
+                            <span class="theme-name"><i class="fa-solid fa-water"></i> Ocean</span>
+                        </button>
+                        <button type="button" data-theme-opt="midnight">
+                            <span class="theme-thumb thumb-midnight"><span class="tt-side"></span><span class="tt-main"><span></span><span></span><span></span></span></span>
+                            <span class="theme-name"><i class="fa-solid fa-star"></i> Midnight</span>
                         </button>
                     </div>
 
@@ -464,32 +528,32 @@ function note_preview(string $content): string {
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir <?= e(MEMOIR_VERSION) ?></span>
-                <h3 id="whatsNewTitle">Make Memoir yours</h3>
+                <h3 id="whatsNewTitle">A far more capable Memoir</h3>
             </div>
         </div>
 
-        <p class="release-copy">This release brings a full dark mode and account controls to Settings.</p>
+        <p class="release-copy">A pro-grade editor, six themes with custom accents, and faster note management.</p>
 
         <ul class="release-list">
             <li>
-                <i class="fa-solid fa-moon"></i>
+                <i class="fa-solid fa-code"></i>
                 <div>
-                    <strong>Light, dark, and system themes</strong>
-                    <span>A hand-tuned dark palette across the whole app. Pick a mode in Settings — "System" follows your OS automatically.</span>
+                    <strong>A pro editor</strong>
+                    <span>Tables, task lists, headings 1–6, and live syntax-highlighted code blocks with smart Tab behavior.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-shield-halved"></i>
+                <i class="fa-solid fa-palette"></i>
                 <div>
-                    <strong>Change your password</strong>
-                    <span>Update your password from Settings, protected by current-password verification.</span>
+                    <strong>Six themes, eight accents</strong>
+                    <span>Light, Dark, System, Sepia, Ocean, and Midnight — plus accent colors, all in a redesigned Settings hub with password change.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-sliders"></i>
+                <i class="fa-solid fa-check-double"></i>
                 <div>
-                    <strong>Settings, organized</strong>
-                    <span>Appearance, General, Email, and Account now live in clear sections.</span>
+                    <strong>Bulk actions</strong>
+                    <span>Select many notes at once — by button or Ctrl+click — and delete them in one go.</span>
                 </div>
             </li>
         </ul>
@@ -502,6 +566,7 @@ function note_preview(string $content): string {
 </div>
 
 <script>window.MEMOIR = {csrf: document.querySelector('meta[name="csrf-token"]').content};</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="<?= asset('assets/js/app.js') ?>"></script>
 </body>
 </html>

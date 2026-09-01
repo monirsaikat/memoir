@@ -89,6 +89,7 @@
     currentTags = (current.tags || '').split(',').filter(Boolean);
     renderTagChips();
     updateWords();
+    highlightCode();
 
     $$('.note-card').forEach(card => card.classList.toggle('active', card.dataset.id == id));
 
@@ -125,7 +126,7 @@
       return;
     }
 
-    $('#noteList').innerHTML = notes.map(n => `<button class="note-card ${current && current.id == n.id ? 'active' : ''}" data-id="${n.id}" data-folder="${n.folder_id ?? ''}" data-pinned="${n.is_pinned}">
+    $('#noteList').innerHTML = notes.map(n => `<button class="note-card ${current && current.id == n.id ? 'active' : ''}${typeof selectedIds !== 'undefined' && selectedIds.has(String(n.id)) ? ' selected' : ''}" data-id="${n.id}" data-folder="${n.folder_id ?? ''}" data-pinned="${n.is_pinned}">
     <div class="note-card-top"><i class="fa-solid ${escapeHtml(n.icon)}" style="color:${escapeHtml(!n.color || n.color.toUpperCase() === '#FFFFFF' ? '#6F5EE8' : n.color)}"></i>${n.is_pinned == 1 ? '<i class="fa-solid fa-thumbtack pin-mini"></i>' : ''}</div>
     <strong>${escapeHtml(n.title)}</strong><p>${escapeHtml(stripHtml(n.content).slice(0, 115))}</p>
     <div class="note-meta"><span>${escapeHtml(n.folder_name || 'Unfiled')}${n.tags ? ' · #' + escapeHtml(n.tags).split(',').join(' #') : ''}</span><time>${fmtDate(n.updated_at)}</time></div></button>`).join('');
@@ -138,14 +139,23 @@
     saveTimer = setTimeout(saveNote, 650);
   }
 
+  // Serialize the note body for saving: drop syntax-highlight markup from
+  // code blocks (recreated on load) and the markdown caret anchors.
+  function serializeContent() {
+    const clone = $('#noteContent').cloneNode(true);
+    clone.querySelectorAll('pre').forEach(pre => {
+      if (pre.querySelector('span')) pre.textContent = pre.textContent;
+    });
+    return clone.innerHTML.replace(/\u200B/g, '');
+  }
+
   async function saveNote() {
     if (!current) return;
     const body = {
       id: current.id,
       folder_id: current.folder_id ?? '',
       title: $('#noteTitle').value,
-      // Strip the zero-width spaces the markdown shortcuts use as caret anchors.
-      content: $('#noteContent').innerHTML.replace(/\u200B/g, ''),
+      content: serializeContent(),
       icon: draftStyle.icon,
       color: draftStyle.color,
       tags: currentTags,
@@ -165,10 +175,70 @@
   // Note actions: open, create, edit, pin, delete
   // ---------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------
+  // Bulk selection & delete
+  // ---------------------------------------------------------------------
+
+  let selectMode = false;
+  const selectedIds = new Set();
+
+  function updateBulkBar() {
+    $('#bulkCount').textContent = `${selectedIds.size} selected`;
+    $('#bulkDelete').disabled = !selectedIds.size;
+  }
+
+  function setSelectMode(on) {
+    selectMode = on;
+    selectedIds.clear();
+    $('#noteList').classList.toggle('select-mode', on);
+    $('#bulkBar').classList.toggle('hidden', !on);
+    $('#selectModeBtn').classList.toggle('active', on);
+    $$('.note-card').forEach(card => card.classList.remove('selected'));
+    updateBulkBar();
+  }
+
+  // In select mode (or with Ctrl/Cmd held) clicking a card toggles its
+  // selection instead of opening it.
   $('#noteList').addEventListener('click', e => {
     const card = e.target.closest('.note-card');
-    if (card) loadNote(card.dataset.id);
+    if (!card) return;
+    if (selectMode || e.ctrlKey || e.metaKey) {
+      if (!selectMode) setSelectMode(true);
+      const id = card.dataset.id;
+      if (selectedIds.has(id)) {
+        selectedIds.delete(id);
+        card.classList.remove('selected');
+      } else {
+        selectedIds.add(id);
+        card.classList.add('selected');
+      }
+      updateBulkBar();
+      return;
+    }
+    loadNote(card.dataset.id);
   });
+
+  $('#selectModeBtn').onclick = () => setSelectMode(!selectMode);
+  $('#bulkCancel').onclick = () => setSelectMode(false);
+
+  $('#bulkSelectAll').onclick = () => {
+    $$('.note-card').forEach(card => {
+      selectedIds.add(card.dataset.id);
+      card.classList.add('selected');
+    });
+    updateBulkBar();
+  };
+
+  $('#bulkDelete').onclick = async () => {
+    if (!selectedIds.size) return;
+    const n = selectedIds.size;
+    if (!confirm(`Delete ${n} note${n > 1 ? 's' : ''} permanently?`)) return;
+    await api('delete-notes', { method: 'POST', body: JSON.stringify({ ids: [...selectedIds] }) });
+    if (current && selectedIds.has(String(current.id))) closeEditor();
+    setSelectMode(false);
+    await refreshList();
+    refreshTagSidebar();
+  };
 
   $('#newNote').onclick = async () => {
     const d = await api('create-note', {
@@ -336,6 +406,7 @@
     }
     if (e.key === 'Escape') {
       $$('.modal-backdrop:not(.hidden)').forEach(closeModal);
+      if (selectMode) setSelectMode(false);
     }
   });
 
@@ -368,8 +439,10 @@
       } catch {}
     });
     const block = currentBlockTag();
-    $$('.toolbar [data-block]').forEach(btn => btn.classList.toggle('active', block === btn.dataset.block));
     $$('.toolbar [data-cmd="formatBlock"]').forEach(btn => btn.classList.toggle('active', block === btn.dataset.value));
+    const heading = /^h([1-6])$/.exec(block);
+    $('#headingLabel').textContent = heading ? `H${heading[1]}` : 'H';
+    $('#headingBtn').classList.toggle('active', !!heading);
   }
   document.addEventListener('selectionchange', syncToolbar);
 
@@ -389,12 +462,42 @@
     queueSave();
   });
 
-  $$('.toolbar [data-block]').forEach(btn => btn.onclick = () => {
-    const target = currentBlockTag() === btn.dataset.block ? 'p' : btn.dataset.block;
+  // Heading dropdown: pick H1–H6 or normal text.
+  const headingSheet = $('#headingSheet');
+
+  $('#headingBtn').onclick = e => {
+    if (!headingSheet.classList.contains('hidden')) {
+      headingSheet.classList.add('hidden');
+      return;
+    }
+    saveSelection();
+    const block = currentBlockTag();
+    $$('#headingSheet button').forEach(btn =>
+      btn.classList.toggle('active', btn.dataset.h === (block || 'p')));
+
+    headingSheet.classList.remove('hidden');
+    const wrapRect = toolbarWrap.getBoundingClientRect();
+    const btnRect = e.currentTarget.getBoundingClientRect();
+    const maxLeft = Math.max(0, wrapRect.width - headingSheet.offsetWidth);
+    headingSheet.style.left = `${Math.min(Math.max(btnRect.left - wrapRect.left, 0), maxLeft)}px`;
+  };
+
+  headingSheet.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-h]');
+    if (!btn) return;
+    restoreSelection();
+    const target = btn.dataset.h === currentBlockTag() ? 'p' : btn.dataset.h;
     document.execCommand('formatBlock', false, target);
+    headingSheet.classList.add('hidden');
     editor.focus();
     syncToolbar();
     queueSave();
+  });
+
+  document.addEventListener('pointerdown', e => {
+    if (headingSheet.classList.contains('hidden')) return;
+    if (e.target.closest('#headingSheet, #headingBtn')) return;
+    headingSheet.classList.add('hidden');
   });
 
   $('#insertLink').onclick = () => {
@@ -528,9 +631,16 @@
 
   document.addEventListener('selectionchange', () => {
     clearTimeout(bubbleTimer);
-    bubbleTimer = setTimeout(positionBubble, 120);
+    bubbleTimer = setTimeout(() => {
+      positionBubble();
+      positionTableMenu();
+      highlightCode();
+    }, 120);
   });
-  editor.addEventListener('scroll', hideBubble);
+  editor.addEventListener('scroll', () => {
+    hideBubble();
+    hideTableMenu();
+  });
 
   $$('.format-bubble [data-bcmd]').forEach(btn => btn.onclick = () => {
     document.execCommand(btn.dataset.bcmd, false, null);
@@ -553,6 +663,182 @@
   };
 
   // ---------------------------------------------------------------------
+  // Task lists (checklists)
+  // ---------------------------------------------------------------------
+
+  function closestChecklistLi(node) {
+    const el = node && (node.nodeType === Node.TEXT_NODE ? node.parentElement : node);
+    const li = el?.closest('ul.checklist > li');
+    return li && editor.contains(li) ? li : null;
+  }
+
+  function markChecklist(ul) {
+    ul.classList.add('checklist');
+    [...ul.children].forEach(li => {
+      if (li.dataset.checked !== '1') li.dataset.checked = '0';
+    });
+  }
+
+  // Toggle the caret's list between checklist and plain bullets,
+  // creating a new list when the caret is not in one.
+  function toggleChecklist() {
+    const sel = getSelection();
+    if (!sel.rangeCount) return;
+    let el = sel.anchorNode;
+    el = el.nodeType === Node.TEXT_NODE ? el.parentElement : el;
+    const ul = el?.closest('ul');
+
+    if (ul && editor.contains(ul)) {
+      if (ul.classList.contains('checklist')) {
+        ul.classList.remove('checklist');
+        [...ul.children].forEach(li => delete li.dataset.checked);
+      } else {
+        markChecklist(ul);
+      }
+    } else {
+      document.execCommand('insertUnorderedList');
+      let el2 = getSelection().anchorNode;
+      el2 = el2 && (el2.nodeType === Node.TEXT_NODE ? el2.parentElement : el2);
+      const created = el2?.closest('ul');
+      if (created && editor.contains(created)) markChecklist(created);
+    }
+    queueSave();
+  }
+
+  $('#checklistBtn').onclick = () => {
+    toggleChecklist();
+    editor.focus();
+  };
+
+  // Clicking the checkbox zone (the left edge of the item) toggles it.
+  editor.addEventListener('click', e => {
+    const li = e.target.closest('ul.checklist > li');
+    if (!li || !editor.contains(li)) return;
+    if (e.clientX <= li.getBoundingClientRect().left + 24) {
+      li.dataset.checked = li.dataset.checked === '1' ? '0' : '1';
+      queueSave();
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // Tables
+  // ---------------------------------------------------------------------
+
+  const tableMenu = $('#tableMenu');
+
+  function currentCell() {
+    const sel = getSelection();
+    if (!sel.rangeCount) return null;
+    let el = sel.anchorNode;
+    el = el && (el.nodeType === Node.TEXT_NODE ? el.parentElement : el);
+    const cell = el?.closest('td,th');
+    return cell && editor.contains(cell) ? cell : null;
+  }
+
+  function placeCaretIn(cell) {
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    range.collapse(false);
+    const sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function insertTable() {
+    const bodyRow = '<tr>' + '<td><br></td>'.repeat(3) + '</tr>';
+    const html = '<table><thead><tr>' + '<th><br></th>'.repeat(3) + '</tr></thead>'
+      + '<tbody>' + bodyRow + bodyRow + '</tbody></table><p><br></p>';
+    editor.focus();
+    document.execCommand('insertHTML', false, html);
+    queueSave();
+  }
+  $('#insertTableBtn').onclick = insertTable;
+
+  function addTableRow(table, afterRow = null) {
+    const cols = table.rows[0] ? table.rows[0].cells.length : 1;
+    const tr = document.createElement('tr');
+    for (let i = 0; i < cols; i++) {
+      const td = document.createElement('td');
+      td.innerHTML = '<br>';
+      tr.appendChild(td);
+    }
+    const body = table.tBodies[0] || table;
+    if (afterRow && afterRow.parentElement && afterRow.parentElement.tagName !== 'THEAD') {
+      afterRow.after(tr);          // below the caret's row
+    } else if (afterRow) {
+      body.insertBefore(tr, body.firstChild);   // caret in header → first body row
+    } else {
+      body.appendChild(tr);        // Tab past the last cell → append
+    }
+    return tr;
+  }
+
+  function hideTableMenu() {
+    tableMenu.classList.add('hidden');
+  }
+
+  function positionTableMenu() {
+    const cell = currentCell();
+    if (!cell) return hideTableMenu();
+    const table = cell.closest('table');
+
+    tableMenu.classList.remove('hidden');
+    const host = editorPanel.getBoundingClientRect();
+    const rect = table.getBoundingClientRect();
+    let top = rect.top - host.top - tableMenu.offsetHeight - 8;
+    if (top < 8) top = rect.top - host.top + 8;
+    const left = Math.min(
+      Math.max(rect.left - host.left, 8),
+      host.width - tableMenu.offsetWidth - 8
+    );
+    tableMenu.style.top = `${top}px`;
+    tableMenu.style.left = `${left}px`;
+  }
+
+  tableMenu.addEventListener('mousedown', e => e.preventDefault());
+
+  tableMenu.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    const cell = currentCell();
+    if (!btn || !cell) return;
+    const table = cell.closest('table');
+    const row = cell.parentElement;
+    const idx = cell.cellIndex;
+
+    switch (btn.dataset.tbl) {
+      case 'addRow': {
+        placeCaretIn(addTableRow(table, row).cells[0]);
+        break;
+      }
+      case 'addCol': {
+        [...table.rows].forEach(r => {
+          const newCell = document.createElement(r.parentElement.tagName === 'THEAD' ? 'th' : 'td');
+          newCell.innerHTML = '<br>';
+          const ref = r.cells[Math.min(idx, r.cells.length - 1)];
+          ref ? ref.after(newCell) : r.appendChild(newCell);
+        });
+        break;
+      }
+      case 'delRow': {
+        row.remove();
+        if (!table.rows.length) table.remove();
+        break;
+      }
+      case 'delCol': {
+        [...table.rows].forEach(r => r.cells[idx]?.remove());
+        if (!table.rows[0] || !table.rows[0].cells.length) table.remove();
+        break;
+      }
+      case 'delTable': {
+        table.remove();
+        break;
+      }
+    }
+    queueSave();
+    positionTableMenu();
+  });
+
+  // ---------------------------------------------------------------------
   // Markdown typing shortcuts
   // ---------------------------------------------------------------------
   //
@@ -561,13 +847,18 @@
   // Inline markers applied as you type: **bold**, *italic*, ~~strike~~, `code`
 
   const BLOCK_SHORTCUTS = {
-    '#': () => document.execCommand('formatBlock', false, 'h2'),
-    '##': () => document.execCommand('formatBlock', false, 'h3'),
+    '#': () => document.execCommand('formatBlock', false, 'h1'),
+    '##': () => document.execCommand('formatBlock', false, 'h2'),
     '###': () => document.execCommand('formatBlock', false, 'h3'),
+    '####': () => document.execCommand('formatBlock', false, 'h4'),
+    '#####': () => document.execCommand('formatBlock', false, 'h5'),
+    '######': () => document.execCommand('formatBlock', false, 'h6'),
     '-': () => document.execCommand('insertUnorderedList'),
     '*': () => document.execCommand('insertUnorderedList'),
     '1.': () => document.execCommand('insertOrderedList'),
     '>': () => document.execCommand('formatBlock', false, 'blockquote'),
+    '[]': () => toggleChecklist(),
+    '[ ]': () => toggleChecklist(),
   };
 
   const INLINE_SHORTCUTS = [
@@ -682,9 +973,225 @@
     return false;
   }
 
+  // ---------------------------------------------------------------------
+  // Syntax highlighting for code blocks (highlight.js)
+  // ---------------------------------------------------------------------
+  //
+  // A block is (re)highlighted only while the caret is outside it, so typing
+  // is never disturbed; the markup is stripped again on save and rebuilt on
+  // load. Language is auto-detected from a common subset.
+
+  const HL_LANGS = ['javascript', 'typescript', 'php', 'python', 'xml', 'css', 'sql', 'bash', 'json', 'java', 'c', 'cpp', 'go', 'rust'];
+
+  function caretInsideNode(el) {
+    const sel = getSelection();
+    return sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).startContainer);
+  }
+
+  // The plain text of a node, with <br> and block children counted as
+  // newlines \u2014 matching what the highlighted render will contain.
+  function textWithBreaks(node) {
+    let out = '';
+    node.childNodes.forEach(child => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        out += child.textContent;
+      } else if (child.tagName === 'BR') {
+        out += '\n';
+      } else {
+        out += textWithBreaks(child);
+        if (child.tagName === 'DIV' || child.tagName === 'P') out += '\n';
+      }
+    });
+    return out;
+  }
+
+  // Caret position inside a pre, measured in characters of its source text.
+  function caretOffsetInPre(pre) {
+    const sel = getSelection();
+    if (!sel.rangeCount || !sel.isCollapsed) return null;
+    const range = sel.getRangeAt(0);
+    if (!pre.contains(range.startContainer)) return null;
+    const probe = range.cloneRange();
+    probe.selectNodeContents(pre);
+    probe.setEnd(range.startContainer, range.startOffset);
+    const box = document.createElement('div');
+    box.appendChild(probe.cloneContents());
+    return textWithBreaks(box).length;
+  }
+
+  function setCaretByOffset(el, offset) {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let remaining = offset;
+    let node;
+    while ((node = walker.nextNode())) {
+      if (remaining <= node.textContent.length) {
+        const range = document.createRange();
+        range.setStart(node, remaining);
+        range.collapse(true);
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+      }
+      remaining -= node.textContent.length;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // Re-render one code block; when the caret is inside it, put it back at
+  // the same character position afterwards so typing is never disturbed.
+  function highlightPre(pre, preserveCaret) {
+    if (!window.hljs) return;
+    const source = textWithBreaks(pre).replace(/\u200B/g, '').replace(/\n$/, '');
+    if (pre.dataset.hl === source) return;
+    if (!source.trim()) {
+      pre.dataset.hl = source;
+      return;
+    }
+    const offset = preserveCaret ? caretOffsetInPre(pre) : null;
+    pre.innerHTML = hljs.highlightAuto(source, HL_LANGS).value;
+    pre.dataset.hl = source;
+    if (offset !== null) setCaretByOffset(pre, Math.min(offset, source.length));
+  }
+
+  function highlightCode() {
+    if (!window.hljs) return;
+    $$('pre', editor).forEach(pre => {
+      if (!caretInsideNode(pre)) highlightPre(pre, false);
+    });
+  }
+
+  function caretPre() {
+    const sel = getSelection();
+    if (!sel.rangeCount) return null;
+    let el = sel.getRangeAt(0).startContainer;
+    el = el.nodeType === Node.TEXT_NODE ? el.parentElement : el;
+    const pre = el?.closest('pre');
+    return pre && editor.contains(pre) ? pre : null;
+  }
+
+  // Rewrite a code block's source around the caret: Tab inserts two spaces,
+  // Shift+Tab removes up to two leading spaces from the caret's line.
+  function editPreIndent(pre, outdent) {
+    const offset = caretOffsetInPre(pre);
+    if (offset === null) {
+      // A text selection is open — let Tab replace it with an indent.
+      if (!outdent) document.execCommand('insertText', false, '  ');
+      return;
+    }
+    const source = textWithBreaks(pre).replace(/\u200B/g, '').replace(/\n$/, '');
+    let next, caret;
+    if (!outdent) {
+      next = source.slice(0, offset) + '  ' + source.slice(offset);
+      caret = offset + 2;
+    } else {
+      const lineStart = source.lastIndexOf('\n', offset - 1) + 1;
+      let remove = 0;
+      if (source.startsWith('  ', lineStart)) remove = 2;
+      else if (source[lineStart] === ' ') remove = 1;
+      if (!remove) return;
+      next = source.slice(0, lineStart) + source.slice(lineStart + remove);
+      caret = Math.max(lineStart, offset - remove);
+    }
+    pre.textContent = next;
+    pre.dataset.hl = '';
+    highlightPre(pre, false);
+    setCaretByOffset(pre, caret);
+    queueSave();
+  }
+
+  // Live highlighting: after each keystroke inside a code block, re-render
+  // it on the next frame with the caret restored. Skipped mid-IME input and
+  // while a selection is open (re-rendering would destroy it).
+  let composing = false;
+  editor.addEventListener('compositionstart', () => { composing = true; });
+  editor.addEventListener('compositionend', () => { composing = false; });
+
+  let hlTimer = null;
+  editor.addEventListener('input', () => {
+    if (composing || !window.hljs) return;
+    const sel = getSelection();
+    if (!sel.rangeCount || !sel.isCollapsed) return;
+    let el = sel.getRangeAt(0).startContainer;
+    el = el.nodeType === Node.TEXT_NODE ? el.parentElement : el;
+    const pre = el?.closest('pre');
+    if (!pre || !editor.contains(pre)) return;
+    clearTimeout(hlTimer);
+    hlTimer = setTimeout(() => highlightPre(pre, true), 90);
+  });
+
   editor.addEventListener('keydown', e => {
     if (e.key === ' ') handleBlockShortcut(e);
     if (e.key === 'Enter') handleEnterShortcut(e);
+
+    // Enter on an empty last line of a code block exits the block.
+    if (e.key === 'Enter' && !e.shiftKey && !e.defaultPrevented) {
+      const pre = caretPre();
+      if (pre) {
+        const raw = textWithBreaks(pre).replace(/\u200B/g, '');
+        const offset = caretOffsetInPre(pre);
+        if (offset === raw.length && raw.endsWith('\n')) {
+          e.preventDefault();
+          pre.textContent = raw.replace(/\s+$/, '');
+          pre.dataset.hl = '';
+          highlightPre(pre, false);
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          pre.after(p);
+          const range = document.createRange();
+          range.setStart(p, 0);
+          range.collapse(true);
+          const sel = getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          queueSave();
+          return;
+        }
+      }
+    }
+
+    // Enter in a checked item: the browser clones the <li> with its
+    // attributes, so reset the new item to unchecked.
+    if (e.key === 'Enter' && !e.shiftKey) {
+      const li = closestChecklistLi(getSelection().anchorNode);
+      if (li) {
+        setTimeout(() => {
+          const fresh = closestChecklistLi(getSelection().anchorNode);
+          if (fresh && fresh !== li) fresh.dataset.checked = '0';
+        }, 0);
+      }
+    }
+
+    // Tab: move through table cells (growing the table past the last cell),
+    // or indent/outdent inside a code block.
+    if (e.key === 'Tab') {
+      const cell = currentCell();
+      if (cell) {
+        e.preventDefault();
+        const table = cell.closest('table');
+        const cells = [...table.querySelectorAll('th,td')];
+        const i = cells.indexOf(cell);
+        if (e.shiftKey) {
+          if (i > 0) placeCaretIn(cells[i - 1]);
+        } else if (i < cells.length - 1) {
+          placeCaretIn(cells[i + 1]);
+        } else {
+          placeCaretIn(addTableRow(table).cells[0]);
+          queueSave();
+        }
+        return;
+      }
+      const pre = caretPre();
+      if (pre) {
+        e.preventDefault();
+        editPreIndent(pre, e.shiftKey);
+      }
+    }
   });
 
   $('#insertImage').onclick = () => $('#imageInput').click();
@@ -841,12 +1348,26 @@
     }
   }
 
+  // Each flavor rides on a light or dark base mode.
+  const THEME_MODES = { light: 'light', dark: 'dark', sepia: 'light', ocean: 'dark', midnight: 'dark' };
+
   function applyTheme(choice) {
-    const dark = choice === 'dark'
-      || (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    let flavor = choice === 'system'
+      ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : choice;
+    if (!THEME_MODES[flavor]) flavor = 'light';
+    document.documentElement.dataset.theme = flavor;
+    document.documentElement.dataset.mode = THEME_MODES[flavor];
     $$('#themeToggle button').forEach(btn =>
       btn.classList.toggle('active', btn.dataset.themeOpt === choice));
+
+    // Swap the code-highlight palette with the theme mode.
+    const hlLight = $('#hlThemeLight');
+    const hlDark = $('#hlThemeDark');
+    if (hlLight && hlDark) {
+      hlLight.disabled = THEME_MODES[flavor] === 'dark';
+      hlDark.disabled = THEME_MODES[flavor] !== 'dark';
+    }
   }
 
   $('#themeToggle').addEventListener('click', e => {
