@@ -2439,12 +2439,112 @@
   // Sidebar toggles and settings
   // ---------------------------------------------------------------------
 
+  let updateState = null;
+
+  function formatUpdateTime(value) {
+    if (!value) return 'Never';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Unknown' : date.toLocaleString();
+  }
+
+  function renderUpdateState(state) {
+    updateState = state;
+    const available = Boolean(state.update_available);
+    $('#updateLatest').textContent = state.latest_version ? `v${state.latest_version}` : 'Unavailable';
+    $('#updateChecked').textContent = formatUpdateTime(state.last_checked);
+    $('#updateNavBadge').classList.toggle('hidden', !available);
+    $('#installUpdate').classList.toggle('hidden', !available || !state.can_install);
+    $('#installUpdate').dataset.version = available ? state.latest_version : '';
+
+    if (state.error) {
+      $('#updateTitle').textContent = 'Could not check for updates';
+      $('#updateSummary').textContent = state.error;
+      $('#updateIcon').className = 'update-icon warning';
+    } else if (available) {
+      $('#updateTitle').textContent = `Memoir ${state.latest_version} is ready`;
+      $('#updateSummary').textContent = state.release_name || 'A newer release is available.';
+      $('#updateIcon').className = 'update-icon available';
+    } else {
+      $('#updateTitle').textContent = 'Memoir is up to date';
+      $('#updateSummary').textContent = `You are running the latest version (${state.current_version}).`;
+      $('#updateIcon').className = 'update-icon current';
+    }
+
+    const issues = state.install_issues || [];
+    $('#updateCapability').textContent = issues.length
+      ? `${issues.join(' ')} You can still download and install the release manually.`
+      : 'Memoir checks GitHub once per day. Updates are downloaded only when you choose Update now.';
+    $('#updateNotes').textContent = state.release_notes || '';
+    $('#updateNotes').classList.toggle('hidden', !state.release_notes || !available);
+    const releaseLink = $('#viewRelease');
+    releaseLink.classList.toggle('hidden', !state.release_url);
+    if (state.release_url) releaseLink.href = state.release_url;
+  }
+
+  async function loadUpdateState(manual = false) {
+    const button = $('#checkUpdate');
+    const status = $('#updateStatus');
+    if (manual) {
+      button.disabled = true;
+      status.className = 'pw-status';
+      status.textContent = 'Checking GitHub…';
+    }
+    try {
+      const state = await api(manual ? 'check-update' : 'update-status', manual ? { method: 'POST' } : {});
+      renderUpdateState(state);
+      if (manual) {
+        status.className = state.error ? 'pw-status error' : 'pw-status success';
+        status.textContent = state.error
+          ? state.error
+          : state.cooldown
+            ? `Already checked recently. Try again in ${state.cooldown}s.`
+            : 'Update check complete.';
+      }
+    } catch (error) {
+      if (manual) {
+        status.className = 'pw-status error';
+        status.textContent = error.message;
+      }
+    } finally {
+      if (manual) button.disabled = false;
+    }
+  }
+
   $('#settingsBtn').onclick = () => openModal('#settingsModal');
   $('#whatsNewBtn').onclick = () => openModal('#whatsNewModal');
   $('#collapseSidebar').onclick = () => document.body.classList.add('sidebar-open');
   $('#closeSidebar').onclick = closeSidebar;
   $('#mobileScrim').onclick = closeSidebar;
   $('#backToList').onclick = () => document.body.classList.remove('editor-open');
+
+  $('#checkUpdate').onclick = () => loadUpdateState(true);
+  $('#installUpdate').onclick = async () => {
+    const version = $('#installUpdate').dataset.version;
+    if (!version || !updateState?.update_available) return;
+    if (!confirm(`Update Memoir from ${updateState.current_version} to ${version}?\n\nMemoir will create a workspace backup and roll back code files if installation fails.`)) return;
+
+    const button = $('#installUpdate');
+    const status = $('#updateStatus');
+    button.disabled = true;
+    $('#checkUpdate').disabled = true;
+    status.className = 'pw-status';
+    status.textContent = 'Downloading, verifying, and installing the update… Keep this tab open.';
+    try {
+      await api('install-update', { method: 'POST', body: JSON.stringify({ version }) });
+      status.className = 'pw-status success';
+      status.textContent = `Memoir ${version} installed. Reloading…`;
+      setTimeout(() => location.reload(), 900);
+    } catch (error) {
+      status.className = 'pw-status error';
+      status.textContent = error.message;
+      button.disabled = false;
+      $('#checkUpdate').disabled = false;
+    }
+  };
+
+  // A cached endpoint makes this cheap on every app visit; it contacts GitHub
+  // only when the last attempt is at least one day old.
+  setTimeout(() => loadUpdateState(false), 1200);
 
   $('#saveSettings').onclick = async () => {
     const body = {
@@ -2546,6 +2646,7 @@
     if (!btn) return;
     $$('.settings-nav button').forEach(x => x.classList.toggle('active', x === btn));
     $$('.settings-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== btn.dataset.pane));
+    $('#saveSettings').classList.toggle('hidden', btn.dataset.pane === 'updates');
   });
 
   // ---------------------------------------------------------------------

@@ -586,6 +586,7 @@ $clientNotes = array_map(static function (array $note) use (&$clientContentBudge
                 <button type="button" data-pane="email"><i class="fa-solid fa-envelope"></i> Email</button>
                 <button type="button" data-pane="account"><i class="fa-solid fa-user-shield"></i> Account</button>
                 <button type="button" data-pane="data"><i class="fa-solid fa-file-import"></i> Data</button>
+                <button type="button" data-pane="updates"><i class="fa-solid fa-cloud-arrow-down"></i> Updates <span class="update-nav-badge hidden" id="updateNavBadge">1</span></button>
                 <div class="settings-nav-foot">Memoir v<?= e(MEMOIR_VERSION) ?></div>
             </nav>
 
@@ -750,6 +751,30 @@ $clientNotes = array_map(static function (array $note) use (&$clientContentBudge
                     </div>
                     <span id="restoreBackupStatus" class="pw-status"></span>
                 </section>
+
+                <section class="settings-panel hidden" data-panel="updates">
+                    <h4>Software updates</h4>
+                    <div class="update-card">
+                        <div class="update-icon" id="updateIcon"><i class="fa-solid fa-cloud-arrow-down"></i></div>
+                        <div class="update-copy">
+                            <strong id="updateTitle">Memoir is checking for updates</strong>
+                            <p id="updateSummary">Installed version <?= e(MEMOIR_VERSION) ?></p>
+                        </div>
+                    </div>
+                    <dl class="update-details">
+                        <div><dt>Installed</dt><dd>v<?= e(MEMOIR_VERSION) ?></dd></div>
+                        <div><dt>Latest</dt><dd id="updateLatest">Checking…</dd></div>
+                        <div><dt>Last checked</dt><dd id="updateChecked">Never</dd></div>
+                    </dl>
+                    <p class="settings-hint" id="updateCapability">Memoir checks GitHub once per day. Updates are never installed automatically.</p>
+                    <pre class="update-notes hidden" id="updateNotes"></pre>
+                    <div class="data-actions update-actions">
+                        <button type="button" id="checkUpdate"><i class="fa-solid fa-rotate"></i> Check for updates</button>
+                        <button type="button" class="primary-btn hidden" id="installUpdate"><i class="fa-solid fa-download"></i> Update now</button>
+                        <a class="hidden" id="viewRelease" href="#" target="_blank" rel="noopener noreferrer">View release notes</a>
+                    </div>
+                    <span id="updateStatus" class="pw-status" role="status" aria-live="polite"></span>
+                </section>
             </div>
         </div>
 
@@ -767,32 +792,32 @@ $clientNotes = array_map(static function (array $note) use (&$clientContentBudge
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir <?= e(MEMOIR_VERSION) ?></span>
-                <h3 id="whatsNewTitle">A far more capable Memoir</h3>
+                <h3 id="whatsNewTitle">Connected notes, safer updates</h3>
             </div>
         </div>
 
-        <p class="release-copy">A pro-grade editor, six themes with custom accents, and faster note management.</p>
+        <p class="release-copy">Turn note names into links, discover related ideas, and keep Memoir current from Settings.</p>
 
         <ul class="release-list">
             <li>
-                <i class="fa-solid fa-code"></i>
+                <i class="fa-solid fa-link"></i>
                 <div>
-                    <strong>A pro editor</strong>
-                    <span>Tables, task lists, headings 1–6, and live syntax-highlighted code blocks with smart Tab behavior.</span>
+                    <strong>Wiki-style internal links</strong>
+                    <span>Type [[ to search note names and insert a link without leaving the editor.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-palette"></i>
+                <i class="fa-solid fa-arrow-rotate-left"></i>
                 <div>
-                    <strong>Six themes, eight accents</strong>
-                    <span>Light, Dark, System, Sepia, Ocean, and Midnight — plus accent colors, all in a redesigned Settings hub with password change.</span>
+                    <strong>Backlinks and mentions</strong>
+                    <span>See which notes link here, plus exact-title mentions that have not been linked yet.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-check-double"></i>
+                <i class="fa-solid fa-cloud-arrow-down"></i>
                 <div>
-                    <strong>Bulk actions</strong>
-                    <span>Select many notes at once — by button or Ctrl+click — and delete them in one go.</span>
+                    <strong>Verified updates</strong>
+                    <span>Check GitHub from Settings and install checksummed releases with backup and rollback protection.</span>
                 </div>
             </li>
         </ul>

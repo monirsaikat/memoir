@@ -1251,6 +1251,19 @@ button { cursor: pointer; }
     transition: background .12s ease, color .12s ease;
 }
 .settings-nav button i { width: 16px; text-align: center; }
+.update-nav-badge {
+    min-width: 17px;
+    height: 17px;
+    margin-left: auto;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 17px;
+    text-align: center;
+}
 .settings-nav button:hover {
     background: rgba(0, 0, 0, .045);
     color: var(--ink);
@@ -2584,6 +2597,61 @@ html[data-theme="sepia"] .mini-menu { background: #faf4e4; border-color: #d7c9a7
     width: min(340px, calc(100vw - 20px));
     max-height: 300px;
 }
+
+/* Verified GitHub release updates */
+.update-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 12px 0 18px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: var(--panel2);
+}
+.update-icon {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font-size: 17px;
+}
+.update-icon.available { background: color-mix(in srgb, #2e9e6f 15%, transparent); color: #27875f; }
+.update-icon.warning { background: color-mix(in srgb, #c98a2d 15%, transparent); color: #b7771d; }
+.update-copy { min-width: 0; }
+.update-copy strong { display: block; margin-bottom: 4px; font-size: 14px; }
+.update-copy p { margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.45; }
+.update-details { margin: 0 0 14px; }
+.update-details > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 8px 2px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+}
+.update-details dt { color: var(--muted); }
+.update-details dd { margin: 0; font-weight: 600; text-align: right; }
+.update-notes {
+    max-height: 150px;
+    overflow: auto;
+    margin: 14px 0 0;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel2);
+    color: var(--muted);
+    font: 11px/1.55 inherit;
+    white-space: pre-wrap;
+}
+.update-actions { align-items: center; }
+.update-actions a { color: var(--accent); font-size: 11.5px; text-decoration: none; }
+.update-actions a:hover { text-decoration: underline; }
+.update-actions .primary-btn { color: #fff; border-color: var(--accent); background: var(--accent); }
 #wikiMenu button { align-items: flex-start; }
 #wikiMenu button > i { margin-top: 3px; }
 #wikiMenu .wiki-result-copy {

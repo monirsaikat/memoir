@@ -15,7 +15,9 @@ SSH, or VPS required.
 - Folder-based notes, pinning, advanced search, icons, and accent colors
 - Rich-text editing with image paste, drop, and upload
 - Autosave, recoverable version history, and useful keyboard shortcuts
+- Wiki-style internal links, backlinks, and unlinked-title mentions
 - Automatic/on-demand workspace backups with validated one-click restore
+- Daily update checks with verified, backup-first one-click installation
 - Responsive, distraction-free interface
 - Browser-based installer built for cPanel/shared hosting
 - Optional SMTP settings
@@ -25,7 +27,8 @@ SSH, or VPS required.
 
 - PHP 8.1 or newer
 - MySQL 5.7+, MariaDB 10.3+, or a compatible newer version
-- PHP extensions: `pdo_mysql`, `fileinfo`, `mbstring`, and `dom`
+- PHP extensions: `pdo_mysql`, `fileinfo`, `mbstring`, and `dom`; `curl` and
+  `zip` enable one-click updates
 - Apache 2.4+ with `.htaccess` support (recommended)
 - Write access to the app root during installation and to `storage/` and `uploads/`
 
@@ -81,18 +84,19 @@ requires it.
 
 ## Updating
 
-Before every update, back up:
+Memoir checks the official GitHub repository once per day while the app is in
+use. Open **Settings → Updates** to check immediately. If a stable update is
+available, **Update now** downloads the dedicated release ZIP, verifies its
+SHA-256 checksum, creates a server-side workspace backup, and installs it.
+`config.php`, `storage/`, and `uploads/` are always preserved, and changed code
+files are rolled back if installation fails.
 
-```text
-config.php
-storage/
-uploads/
-your MySQL/MariaDB database
-```
-
-Then replace the application files with the new release while preserving those
-runtime files and folders. Read [CHANGELOG.md](CHANGELOG.md) for release-specific
-notes. Never overwrite `config.php` with `config.example.php`.
+One-click updates require the PHP `curl` and `zip` extensions and write access
+to the application files. When either is unavailable, the Updates panel links
+to the release for manual installation. For a manual update, back up
+`config.php`, `storage/`, `uploads/`, and the database, then replace only the
+application files from the named `memoir-vX.Y.Z.zip` release asset. Never use an
+automatic GitHub “Source code” archive or overwrite `config.php`.
 
 ## Security notes
 
@@ -148,6 +152,7 @@ php -l install/index.php
 php -l login.php
 php -l index.php
 php -l api.php
+php -l updater.php
 php -l logout.php
 ```
 

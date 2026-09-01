@@ -3,6 +3,27 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-09-02
+
+### Added
+
+- Wiki-link autocomplete now inserts links with `[[Note Name]]`, and each note
+  shows both linked backlinks and exact-title unlinked mentions.
+- Settings now includes a discreet Updates panel. Memoir checks the fixed
+  official GitHub repository at most once per day, supports an on-demand check,
+  and shows an Update now action only when a newer stable release exists.
+- One-click updates use a dedicated release ZIP, require a matching SHA-256
+  checksum, create a workspace backup, preserve `config.php`, `storage/`, and
+  `uploads/`, and restore changed code files if installation fails.
+
+### Security
+
+- ZIP entries are extracted individually with traversal and symlink defenses;
+  generic source archives and packages whose version does not match the release
+  are rejected.
+- Release automation produces checksummed, provenance-attested artifacts from
+  version-matching `v*` tags.
+
 ## [1.7.0] - 2026-09-01
 
 ### Added
@@ -198,6 +219,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
+[1.8.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.8.0
+[1.7.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.7.0
 [1.6.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.6.0
 [1.5.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.5.0
 [1.4.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.4.0

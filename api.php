@@ -923,6 +923,34 @@ case 'change-password':
 
     json_response(['ok' => true]);
 
+case 'update-status':
+    require_method('GET');
+    require_once __DIR__ . '/updater.php';
+    try {
+        json_response(memoir_check_for_updates(false));
+    } catch (Throwable $error) {
+        json_response(['ok' => false, 'message' => $error->getMessage()], 503);
+    }
+
+case 'check-update':
+    require_method('POST');
+    require_once __DIR__ . '/updater.php';
+    try {
+        json_response(memoir_check_for_updates(true));
+    } catch (Throwable $error) {
+        json_response(['ok' => false, 'message' => $error->getMessage()], 503);
+    }
+
+case 'install-update':
+    require_method('POST');
+    require_once __DIR__ . '/updater.php';
+    $data = request_json();
+    try {
+        json_response(memoir_install_update((string) ($data['version'] ?? '')));
+    } catch (Throwable $error) {
+        json_response(['ok' => false, 'message' => $error->getMessage()], 422);
+    }
+
 case 'settings':
     require_method('POST');
     $data = request_json();
