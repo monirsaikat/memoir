@@ -158,13 +158,16 @@ function sanitize_note_html(string $html): string {
                 $checked = $child->getAttribute('data-checked');
                 if ($checked === '0' || $checked === '1') $kept['data-checked'] = $checked;
             } elseif ($tag === 'span') {
-                // Only hex text/highlight colors survive; everything else is dropped.
+                // Only text/highlight colors survive — hex or the rgb()/rgba()
+                // form browsers normalize inline styles to. Everything else is
+                // dropped.
                 $style = strtolower(str_replace(' ', '', $child->getAttribute('style')));
+                $colorValue = '(#[0-9a-f]{3,8}|rgba?\([0-9.,%]{1,40}\)|transparent)';
                 $safeStyles = [];
-                if (preg_match('/(?<![-a-z])color:(#[0-9a-f]{3,8})/', $style, $m)) {
+                if (preg_match('/(?<![-a-z])color:' . $colorValue . '/', $style, $m)) {
                     $safeStyles[] = 'color:' . $m[1];
                 }
-                if (preg_match('/background-color:(#[0-9a-f]{3,8})/', $style, $m)) {
+                if (preg_match('/background-color:' . $colorValue . '/', $style, $m)) {
                     $safeStyles[] = 'background-color:' . $m[1];
                 }
                 if ($safeStyles) $kept['style'] = implode(';', $safeStyles);
