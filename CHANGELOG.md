@@ -3,6 +3,15 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Update checks now prefer IPv4 with a shared-host-friendly timeout and fall
+  back from the GitHub API to the public releases feed when an outbound host is
+  blocked. The fallback selects the highest stable version rather than relying
+  on feed order.
+
 ## [1.8.0] - 2026-09-02
 
 ### Added

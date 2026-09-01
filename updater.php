@@ -73,7 +73,7 @@ function memoir_update_capabilities(): array {
     return ['can_install' => !$issues, 'issues' => array_values(array_unique($issues))];
 }
 
-function memoir_http(string $url, array $headers = [], ?string $destination = null, int $timeout = 20): string {
+function memoir_http(string $url, array $headers = [], ?string $destination = null, int $timeout = 35): string {
     if (!extension_loaded('curl') || !str_starts_with($url, 'https://')) {
         throw new RuntimeException('A secure cURL connection is not available.');
     }
@@ -86,7 +86,12 @@ function memoir_http(string $url, array $headers = [], ?string $destination = nu
         $options = [
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS => 5,
-            CURLOPT_CONNECTTIMEOUT => 8,
+            // Some shared/cPanel hosts advertise IPv6 without a working
+            // outbound route. GitHub supports IPv4, so prefer it and allow
+            // enough time for congested shared-host DNS/TLS handshakes.
+            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+            CURLOPT_CONNECTTIMEOUT => min(15, $timeout),
+            CURLOPT_DNS_CACHE_TIMEOUT => 300,
             CURLOPT_TIMEOUT => $timeout,
             CURLOPT_USERAGENT => 'Memoir/' . MEMOIR_VERSION . ' (+' . 'https://github.com/' . MEMOIR_UPDATE_REPOSITORY . ')',
             CURLOPT_HTTPHEADER => $headers,
@@ -119,6 +124,73 @@ function memoir_http(string $url, array $headers = [], ?string $destination = nu
 function memoir_normalize_version(string $tag): ?string {
     $version = ltrim(trim($tag), "vV");
     return preg_match('/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/', $version) ? $version : null;
+}
+
+function memoir_fetch_latest_release(): array {
+    try {
+        $json = memoir_http(
+            'https://api.github.com/repos/' . MEMOIR_UPDATE_REPOSITORY . '/releases/latest',
+            ['Accept: application/vnd.github+json', 'X-GitHub-Api-Version: 2022-11-28']
+        );
+        $release = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
+        if (!is_array($release)) throw new RuntimeException('GitHub returned an invalid release response.');
+        return $release;
+    } catch (Throwable $apiError) {
+        // api.github.com is blocked by a few shared hosts even when ordinary
+        // github.com downloads work. The public Atom feed gives us the stable
+        // tag; the dedicated asset names remain deterministic and checksummed.
+        try {
+            $xml = memoir_http(
+                'https://github.com/' . MEMOIR_UPDATE_REPOSITORY . '/releases.atom',
+                ['Accept: application/atom+xml']
+            );
+            $document = new DOMDocument();
+            $previous = libxml_use_internal_errors(true);
+            $loaded = $document->loadXML($xml, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+            if (!$loaded) throw new RuntimeException('GitHub returned an invalid release feed.');
+
+            $xpath = new DOMXPath($document);
+            $xpath->registerNamespace('atom', 'http://www.w3.org/2005/Atom');
+            $bestRelease = null;
+            $bestVersion = null;
+            foreach ($xpath->query('//atom:entry') ?: [] as $entry) {
+                $linkNode = $xpath->query('atom:link[@rel="alternate"]', $entry)?->item(0)
+                    ?? $xpath->query('atom:link', $entry)?->item(0);
+                $releaseUrl = $linkNode instanceof DOMElement ? $linkNode->getAttribute('href') : '';
+                if (!preg_match('~/releases/tag/([^/?#]+)~', $releaseUrl, $tagMatch)) continue;
+                $tag = rawurldecode($tagMatch[1]);
+                $version = memoir_normalize_version($tag);
+                if (!$version || str_contains($version, '-')) continue;
+
+                $assetName = "memoir-v$version.zip";
+                $downloadBase = 'https://github.com/' . MEMOIR_UPDATE_REPOSITORY . '/releases/download/' . rawurlencode($tag) . '/';
+                $candidate = [
+                    'tag_name' => $tag,
+                    'name' => trim((string) ($xpath->query('atom:title', $entry)?->item(0)?->textContent ?? "Memoir $version")),
+                    'body' => trim(strip_tags((string) ($xpath->query('atom:content', $entry)?->item(0)?->textContent ?? ''))),
+                    'html_url' => $releaseUrl,
+                    'published_at' => trim((string) ($xpath->query('atom:updated', $entry)?->item(0)?->textContent ?? '')) ?: null,
+                    'assets' => [
+                        ['name' => $assetName, 'browser_download_url' => $downloadBase . rawurlencode($assetName), 'digest' => ''],
+                        ['name' => "$assetName.sha256", 'browser_download_url' => $downloadBase . rawurlencode("$assetName.sha256"), 'digest' => ''],
+                    ],
+                ];
+                if ($bestVersion === null || version_compare($version, $bestVersion, '>')) {
+                    $bestVersion = $version;
+                    $bestRelease = $candidate;
+                }
+            }
+            if ($bestRelease !== null) return $bestRelease;
+            throw new RuntimeException('No stable Memoir release was found in the GitHub feed.');
+        } catch (Throwable $feedError) {
+            throw new RuntimeException(
+                'Could not reach GitHub releases. API: ' . $apiError->getMessage()
+                . ' Feed: ' . $feedError->getMessage()
+            );
+        }
+    }
 }
 
 function memoir_public_update_state(array $state): array {
@@ -160,11 +232,7 @@ function memoir_check_for_updates(bool $manual = false): array {
         }
 
         try {
-            $json = memoir_http(
-                'https://api.github.com/repos/' . MEMOIR_UPDATE_REPOSITORY . '/releases/latest',
-                ['Accept: application/vnd.github+json', 'X-GitHub-Api-Version: 2022-11-28']
-            );
-            $release = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
+            $release = memoir_fetch_latest_release();
             $version = memoir_normalize_version((string) ($release['tag_name'] ?? ''));
             if (!$version) throw new RuntimeException('The latest GitHub release has an invalid version tag.');
             $assetName = "memoir-v$version.zip";
