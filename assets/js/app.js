@@ -23,9 +23,12 @@
   let pinnedOnly = false;    // "Pinned" nav filter
   let trashView = false;     // showing the trash instead of live notes
   let saveTimer = null;      // debounce timer for autosave
+  let savePromise = null;    // active save, awaited before history opens
   let draftStyle = { icon: 'fa-note-sticky', color: '#6F5EE8' };
   let currentTags = [];      // tags of the open note
   let sortMode = 'updated';  // note list order: updated | created | title
+  let lastSearchText = '';
+  const advancedFilters = { scope: 'all', pinned: '', state: '', after: '', before: '' };
   try {
     const stored = localStorage.getItem('memoir-sort');
     if (['updated', 'created', 'title'].includes(stored)) sortMode = stored;
@@ -137,9 +140,16 @@
     if (pinnedOnly) query += '&pinned=1';
     if (trashView) query += '&trash=1';
     if (sortMode !== 'updated') query += `&sort=${sortMode}`;
+    if (advancedFilters.scope !== 'all') query += `&scope=${encodeURIComponent(advancedFilters.scope)}`;
+    if (advancedFilters.pinned !== '') query += `&pinned=${advancedFilters.pinned}`;
+    if (advancedFilters.state !== '') query += `&state=${advancedFilters.state}`;
+    if (advancedFilters.after) query += `&after=${advancedFilters.after}`;
+    if (advancedFilters.before) query += `&before=${advancedFilters.before}`;
 
     const d = await api('search', { query });
+    lastSearchText = d.query_text || '';
     renderNotes(d.notes);
+    renderActiveSearchFilters();
     syncUrl();
   }
 
@@ -170,7 +180,7 @@
       return;
     }
 
-    const q = searchInput.value.trim();
+    const q = lastSearchText;
     $('#noteList').innerHTML = notes.map(n => {
       const snip = previewSnippet(n.content, q);
       return `<button class="note-card ${current && current.id == n.id ? 'active' : ''}${typeof selectedIds !== 'undefined' && selectedIds.has(String(n.id)) ? ' selected' : ''}" data-id="${n.id}" data-folder="${n.folder_id ?? ''}" data-pinned="${n.is_pinned}">
@@ -199,6 +209,8 @@
 
   async function saveNote() {
     if (!current) return;
+    clearTimeout(saveTimer);
+    saveTimer = null;
     const body = {
       id: current.id,
       folder_id: current.folder_id ?? '',
@@ -209,13 +221,17 @@
       tags: currentTags,
       is_pinned: current.is_pinned,
     };
+    const request = api('save-note', { method: 'POST', body: JSON.stringify(body) });
+    savePromise = request;
     try {
-      await api('save-note', { method: 'POST', body: JSON.stringify(body) });
+      await request;
       $('#saveStatus').textContent = 'Saved';
       await refreshList();
       refreshSidebar();
     } catch (e) {
       $('#saveStatus').textContent = 'Save failed';
+    } finally {
+      if (savePromise === request) savePromise = null;
     }
   }
 
@@ -485,6 +501,59 @@
     clearTimeout(searchTimer);
     searchTimer = setTimeout(refreshList, 220);
   });
+
+  function syncAdvancedFilterControls() {
+    $('#searchScope').value = advancedFilters.scope;
+    $('#searchPinned').value = advancedFilters.pinned;
+    $('#searchState').value = advancedFilters.state;
+    $('#searchAfter').value = advancedFilters.after;
+    $('#searchBefore').value = advancedFilters.before;
+  }
+
+  function renderActiveSearchFilters() {
+    const labels = [];
+    if (advancedFilters.scope !== 'all') labels.push(`In: ${advancedFilters.scope}`);
+    if (advancedFilters.pinned === '1') labels.push('Pinned');
+    if (advancedFilters.pinned === '0') labels.push('Not pinned');
+    if (advancedFilters.state === 'active') labels.push('Active notes');
+    if (advancedFilters.state === 'trash') labels.push('Trash');
+    if (advancedFilters.state === 'all') labels.push('Active + Trash');
+    if (advancedFilters.after) labels.push(`After ${advancedFilters.after}`);
+    if (advancedFilters.before) labels.push(`Before ${advancedFilters.before}`);
+    const wrap = $('#activeSearchFilters');
+    wrap.classList.toggle('hidden', !labels.length);
+    wrap.innerHTML = labels.length
+      ? labels.map(label => `<button type="button" title="Clear advanced filters">${escapeHtml(label)} &times;</button>`).join('')
+      : '';
+    $('#searchFilterBtn').classList.toggle('active', !!labels.length);
+  }
+
+  function clearAdvancedFilters(refresh = true) {
+    Object.assign(advancedFilters, { scope: 'all', pinned: '', state: '', after: '', before: '' });
+    syncAdvancedFilterControls();
+    renderActiveSearchFilters();
+    if (refresh) refreshList();
+  }
+
+  $('#searchFilterBtn').onclick = e => {
+    e.stopPropagation();
+    const panel = $('#searchFilterPanel');
+    panel.classList.toggle('hidden');
+    syncAdvancedFilterControls();
+  };
+  $('#searchFilterPanel').addEventListener('click', e => e.stopPropagation());
+  document.addEventListener('click', () => $('#searchFilterPanel').classList.add('hidden'));
+  $('#applySearchFilters').onclick = () => {
+    advancedFilters.scope = $('#searchScope').value;
+    advancedFilters.pinned = $('#searchPinned').value;
+    advancedFilters.state = $('#searchState').value;
+    advancedFilters.after = $('#searchAfter').value;
+    advancedFilters.before = $('#searchBefore').value;
+    $('#searchFilterPanel').classList.add('hidden');
+    refreshList();
+  };
+  $('#clearSearchFilters').onclick = () => clearAdvancedFilters();
+  $('#activeSearchFilters').onclick = () => clearAdvancedFilters();
 
   // Keyboard shortcuts: ⌘K search, ⌘N new note, ⌘S save, Esc close modals
   document.addEventListener('keydown', e => {
@@ -1383,6 +1452,86 @@
     if (e.target === m) closeModal(m);
   }));
 
+  // ---------------------------------------------------------------------
+  // Note version history
+  // ---------------------------------------------------------------------
+
+  let selectedVersionId = null;
+
+  function formatVersionDate(value) {
+    try {
+      return new Date(value.replace(' ', 'T')).toLocaleString(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+      });
+    } catch {
+      return value || '';
+    }
+  }
+
+  async function previewVersion(versionId) {
+    if (!current) return;
+    const d = await api('note-version', { query: `&note_id=${current.id}&version_id=${versionId}` });
+    selectedVersionId = String(d.version.id);
+    $$('#historyList button').forEach(button => button.classList.toggle('active', button.dataset.versionId === selectedVersionId));
+    $('#historyPreviewMeta').textContent = `${formatVersionDate(d.version.created_at)} · ${d.version.source === 'restore' ? 'Before restore' : 'Automatic snapshot'}`;
+    $('#historyPreviewTitle').textContent = d.version.title || 'Untitled note';
+    $('#historyPreviewContent').innerHTML = d.version.content || '<p><em>Empty note</em></p>';
+    $('#restoreVersion').disabled = false;
+  }
+
+  async function openHistory() {
+    if (!current || current.deleted_at) return;
+    if (saveTimer !== null) await saveNote();
+    else if (savePromise) await savePromise;
+    selectedVersionId = null;
+    $('#restoreVersion').disabled = true;
+    $('#historyStatus').textContent = '';
+    $('#historyPreviewMeta').textContent = 'Select a version to preview';
+    $('#historyPreviewTitle').textContent = '';
+    $('#historyPreviewContent').innerHTML = '';
+    $('#historyList').innerHTML = '<span class="history-empty">Loading history…</span>';
+    openModal('#historyModal');
+    try {
+      const d = await api('note-history', { query: `&id=${current.id}` });
+      if (!d.versions.length) {
+        $('#historyList').innerHTML = '<span class="history-empty">No earlier versions yet. A snapshot is created when you begin changing this note.</span>';
+        return;
+      }
+      $('#historyList').innerHTML = d.versions.map(version => `
+        <button type="button" data-version-id="${version.id}">
+          <strong>${escapeHtml(version.title || 'Untitled note')}</strong>
+          <span>${escapeHtml(formatVersionDate(version.created_at))}${version.source === 'restore' ? ' · before restore' : ''}</span>
+        </button>`).join('');
+      previewVersion(d.versions[0].id);
+    } catch (err) {
+      $('#historyList').innerHTML = `<span class="history-empty">${escapeHtml(err.message)}</span>`;
+    }
+  }
+
+  $('#historyNote').onclick = openHistory;
+  $('#historyList').onclick = e => {
+    const button = e.target.closest('button[data-version-id]');
+    if (button) previewVersion(button.dataset.versionId);
+  };
+  $('#restoreVersion').onclick = async () => {
+    if (!current || !selectedVersionId || !confirm('Restore this version? The current note will be preserved in history.')) return;
+    const status = $('#historyStatus');
+    status.textContent = 'Restoring…';
+    try {
+      await api('restore-version', {
+        method: 'POST',
+        body: JSON.stringify({ note_id: current.id, version_id: selectedVersionId }),
+      });
+      const noteId = current.id;
+      closeModal($('#historyModal'));
+      await loadNote(noteId, false);
+      await refreshList();
+      refreshSidebar();
+    } catch (err) {
+      status.textContent = err.message;
+    }
+  };
+
   // New folder modal
   let folderIcon = 'fa-folder';
   let folderColor = '#6F5EE8';
@@ -1865,6 +2014,54 @@
     e.target.value = '';
   });
 
+  $('#downloadBackup').onclick = () => {
+    const link = document.createElement('a');
+    link.href = 'api.php?action=backup-export';
+    link.download = '';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  $('#backupNow').onclick = async () => {
+    const status = $('#backupStatus');
+    status.className = 'pw-status';
+    status.textContent = 'Creating server backup…';
+    try {
+      const d = await api('backup-now', { method: 'POST', body: '{}' });
+      status.className = 'pw-status ok';
+      status.textContent = `Saved securely as ${d.filename}.`;
+    } catch (err) {
+      status.className = 'pw-status error';
+      status.textContent = err.message;
+    }
+  };
+
+  $('#restoreBackup').onclick = () => $('#restoreBackupFile').click();
+  $('#restoreBackupFile').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const status = $('#restoreBackupStatus');
+    if (!confirm(`Restore “${file.name}”? This replaces the current workspace after creating a safety backup.`)) {
+      e.target.value = '';
+      return;
+    }
+    status.className = 'pw-status';
+    status.textContent = 'Validating and restoring backup…';
+    const form = new FormData();
+    form.append('backup', file);
+    try {
+      const d = await api('backup-restore', { method: 'POST', body: form });
+      status.className = 'pw-status ok';
+      status.textContent = `Restored ${d.notes} notes, ${d.folders} folders, and ${d.versions} versions. Reloading…`;
+      setTimeout(() => location.reload(), 900);
+    } catch (err) {
+      status.className = 'pw-status error';
+      status.textContent = err.message;
+    }
+    e.target.value = '';
+  });
+
   // Note appearance modal
   $('#noteStyle').onclick = () => openModal('#styleModal');
 
@@ -1906,6 +2103,9 @@
       smtp_user: $('#setSmtpUser').value,
       smtp_pass: $('#setSmtpPass').value,
       smtp_from: $('#setSmtpFrom').value,
+      backup_enabled: $('#backupEnabled').checked,
+      backup_interval_hours: $('#backupInterval').value,
+      backup_keep: $('#backupKeep').value,
     };
     await api('settings', { method: 'POST', body: JSON.stringify(body) });
     closeModal($('#settingsModal'));
@@ -2045,6 +2245,11 @@
     if (pinnedOnly && !trashView) params.set('pinned', '1');
     const q = searchInput.value.trim();
     if (q) params.set('q', q);
+    if (advancedFilters.scope !== 'all') params.set('scope', advancedFilters.scope);
+    if (advancedFilters.pinned !== '') params.set('pin', advancedFilters.pinned);
+    if (advancedFilters.state !== '') params.set('state', advancedFilters.state);
+    if (advancedFilters.after) params.set('after', advancedFilters.after);
+    if (advancedFilters.before) params.set('before', advancedFilters.before);
 
     const qs = params.toString();
     const newSearch = qs ? `?${qs}` : '';
@@ -2063,6 +2268,12 @@
     filterTag = params.get('tag') || '';
     pinnedOnly = params.get('pinned') === '1';
     trashView = params.get('trash') === '1';
+    advancedFilters.scope = ['title', 'content', 'tags'].includes(params.get('scope')) ? params.get('scope') : 'all';
+    advancedFilters.pinned = ['0', '1'].includes(params.get('pin')) ? params.get('pin') : '';
+    advancedFilters.state = ['active', 'trash', 'all'].includes(params.get('state')) ? params.get('state') : '';
+    advancedFilters.after = /^\d{4}-\d{2}-\d{2}$/.test(params.get('after') || '') ? params.get('after') : '';
+    advancedFilters.before = /^\d{4}-\d{2}-\d{2}$/.test(params.get('before') || '') ? params.get('before') : '';
+    syncAdvancedFilterControls();
     applyTrashModeUi();
 
     clearFilterHighlights();

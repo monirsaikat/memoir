@@ -3,6 +3,7 @@ require __DIR__ . '/bootstrap.php';
 
 $user = require_auth();
 ensure_schema();
+maybe_create_automatic_backup();
 
 $settings = db()->query("SELECT * FROM settings WHERE id=1")->fetch();
 
@@ -186,8 +187,47 @@ function note_preview(string $content): string {
             <input id="globalSearch" type="search" name="memoir_note_search" placeholder="Search notes"
                    aria-label="Search notes" autocomplete="off" autocapitalize="off" spellcheck="false"
                    readonly data-1p-ignore data-lpignore="true" data-form-type="other">
+            <button type="button" id="searchFilterBtn" class="search-filter-btn" aria-label="Advanced search" title="Advanced search">
+                <i class="fa-solid fa-sliders"></i>
+            </button>
             <kbd>⌘ K</kbd>
+            <div class="search-filter-panel hidden" id="searchFilterPanel">
+                <div class="search-filter-head">
+                    <strong>Advanced search</strong>
+                    <button type="button" id="clearSearchFilters">Clear</button>
+                </div>
+                <label>Search in
+                    <select id="searchScope">
+                        <option value="all">Title, content, and tags</option>
+                        <option value="title">Title only</option>
+                        <option value="content">Content only</option>
+                        <option value="tags">Tags only</option>
+                    </select>
+                </label>
+                <div class="search-filter-grid">
+                    <label>Pin status
+                        <select id="searchPinned">
+                            <option value="">Any</option>
+                            <option value="1">Pinned</option>
+                            <option value="0">Not pinned</option>
+                        </select>
+                    </label>
+                    <label>Location
+                        <select id="searchState">
+                            <option value="">Current view</option>
+                            <option value="active">Active notes</option>
+                            <option value="trash">Trash</option>
+                            <option value="all">Active and Trash</option>
+                        </select>
+                    </label>
+                    <label>Updated after<input id="searchAfter" type="date"></label>
+                    <label>Updated before<input id="searchBefore" type="date"></label>
+                </div>
+                <p>Power search: <code>tag:work</code> <code>folder:"Ideas"</code> <code>is:pinned</code> <code>before:2026-09-01</code> <code>in:title</code></p>
+                <button type="button" class="primary-btn search-apply" id="applySearchFilters">Apply filters</button>
+            </div>
         </div>
+        <div class="active-search-filters hidden" id="activeSearchFilters"></div>
 
         <div id="noteList" class="note-list">
             <?php if (!$notes): ?>
@@ -253,10 +293,11 @@ function note_preview(string $content): string {
                     <span id="saveStatus">Saved</span>
                 </div>
                 <div class="editor-actions">
-                    <button class="icon-btn" id="shareNote" title="Share note"><i class="fa-solid fa-share-nodes"></i></button>
-                    <button class="icon-btn" id="pinNote" title="Pin"><i class="fa-solid fa-thumbtack"></i></button>
-                    <button class="icon-btn" id="noteStyle" title="Note style"><i class="fa-solid fa-palette"></i></button>
-                    <button class="icon-btn danger" id="deleteNote" title="Delete"><i class="fa-regular fa-trash-can"></i></button>
+                    <button class="icon-btn" id="shareNote" title="Share note" aria-label="Share note"><i class="fa-solid fa-share-nodes"></i></button>
+                    <button class="icon-btn" id="historyNote" title="Version history" aria-label="Version history"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                    <button class="icon-btn" id="pinNote" title="Pin" aria-label="Pin note"><i class="fa-solid fa-thumbtack"></i></button>
+                    <button class="icon-btn" id="noteStyle" title="Note style" aria-label="Note style"><i class="fa-solid fa-palette"></i></button>
+                    <button class="icon-btn danger" id="deleteNote" title="Delete" aria-label="Delete note"><i class="fa-regular fa-trash-can"></i></button>
                 </div>
             </header>
 
@@ -476,6 +517,32 @@ function note_preview(string $content): string {
     </div>
 </div>
 
+<!-- Modal: note version history -->
+<div class="modal-backdrop hidden" id="historyModal">
+    <div class="modal wide history-modal" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
+        <div class="history-head">
+            <div>
+                <h3 id="historyModalTitle">Version history</h3>
+                <p>Memoir keeps up to 100 snapshots, coalesced during active editing.</p>
+            </div>
+            <button type="button" class="icon-btn" data-close aria-label="Close history"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="history-layout">
+            <div class="history-list" id="historyList"><span class="history-empty">Loading history…</span></div>
+            <div class="history-preview">
+                <div class="history-preview-meta" id="historyPreviewMeta">Select a version to preview</div>
+                <h2 id="historyPreviewTitle"></h2>
+                <div id="historyPreviewContent"></div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <span class="history-status" id="historyStatus"></span>
+            <button type="button" data-close>Close</button>
+            <button type="button" class="primary-btn" id="restoreVersion" disabled>Restore this version</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: settings -->
 <div class="modal-backdrop hidden" id="settingsModal">
     <div class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
@@ -605,6 +672,39 @@ function note_preview(string $content): string {
                         <span id="importStatus" class="pw-status"></span>
                         <button type="button" class="primary-btn" id="importBtn">Choose files…</button>
                     </div>
+
+                    <div class="data-divider"></div>
+                    <h4>Workspace backup</h4>
+                    <p class="settings-hint">Backups contain folders, notes, Trash, and version history. Passwords and public share tokens are never exported.</p>
+                    <div class="data-actions">
+                        <button type="button" id="downloadBackup"><i class="fa-solid fa-download"></i> Download backup</button>
+                        <button type="button" id="backupNow"><i class="fa-solid fa-hard-drive"></i> Save on server now</button>
+                    </div>
+                    <span id="backupStatus" class="pw-status"><?= !empty($settings['backup_last_at']) ? 'Last server backup: ' . e($settings['backup_last_at']) : 'No server backup has run yet.' ?></span>
+
+                    <div class="backup-schedule">
+                        <label class="check-row"><input type="checkbox" id="backupEnabled" <?= !isset($settings['backup_enabled']) || $settings['backup_enabled'] ? 'checked' : '' ?>> Automatic server backups</label>
+                        <label>Every
+                            <select id="backupInterval">
+                                <?php foreach ([1, 6, 12, 24, 72, 168] as $hours): ?>
+                                <?php $intervalLabel = $hours < 24 ? $hours . ' ' . ($hours === 1 ? 'hour' : 'hours') : ($hours / 24) . ' ' . ($hours === 24 ? 'day' : 'days'); ?>
+                                <option value="<?= $hours ?>" <?= (int) ($settings['backup_interval_hours'] ?? 24) === $hours ? 'selected' : '' ?>><?= $intervalLabel ?></option>
+                                <?php endforeach ?>
+                            </select>
+                        </label>
+                        <label>Keep
+                            <input type="number" id="backupKeep" min="1" max="50" value="<?= (int) ($settings['backup_keep'] ?? 7) ?>">
+                        </label>
+                    </div>
+
+                    <div class="data-divider"></div>
+                    <h4>Restore workspace</h4>
+                    <p class="settings-hint">Restoring replaces the current folders, notes, Trash, and history. Memoir creates a server-side safety backup first.</p>
+                    <input type="file" id="restoreBackupFile" accept="application/json,.json" hidden>
+                    <div class="data-actions">
+                        <button type="button" class="danger-outline" id="restoreBackup"><i class="fa-solid fa-rotate-left"></i> Choose backup to restore</button>
+                    </div>
+                    <span id="restoreBackupStatus" class="pw-status"></span>
                 </section>
             </div>
         </div>

@@ -12,9 +12,10 @@ SSH, or VPS required.
 
 ## Features
 
-- Folder-based notes, pinning, search, icons, and accent colors
+- Folder-based notes, pinning, advanced search, icons, and accent colors
 - Rich-text editing with image paste, drop, and upload
-- Autosave and useful keyboard shortcuts
+- Autosave, recoverable version history, and useful keyboard shortcuts
+- Automatic/on-demand workspace backups with validated one-click restore
 - Responsive, distraction-free interface
 - Browser-based installer built for cPanel/shared hosting
 - Optional SMTP settings
@@ -45,6 +46,11 @@ SSH, or VPS required.
 
 The installer creates the tables, writes `config.php`, and creates
 `storage/installed.lock`. You do not need to import SQL manually.
+
+Automatic backups are request-driven for shared-hosting compatibility: the
+first authenticated request after the configured interval writes the next JSON
+snapshot under `storage/backups/`. Keep `storage/` writable and protected from
+direct web access.
 
 ### Folder and URL examples
 

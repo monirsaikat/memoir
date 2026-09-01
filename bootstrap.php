@@ -114,10 +114,121 @@ function ensure_schema(): void {
         if (!db()->query("SHOW COLUMNS FROM notes LIKE 'share_token'")->fetch()) {
             db()->exec("ALTER TABLE notes ADD COLUMN share_token VARCHAR(64) NULL, ADD UNIQUE INDEX uq_share (share_token)");
         }
+        db()->exec(
+            "CREATE TABLE IF NOT EXISTS note_versions (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                note_id INT UNSIGNED NOT NULL,
+                folder_id INT UNSIGNED NULL,
+                title VARCHAR(255) NOT NULL,
+                content LONGTEXT NOT NULL,
+                color VARCHAR(20) NOT NULL DEFAULT '#FFFFFF',
+                tags VARCHAR(500) NOT NULL DEFAULT '',
+                icon VARCHAR(80) NOT NULL DEFAULT 'fa-note-sticky',
+                is_pinned TINYINT(1) NOT NULL DEFAULT 0,
+                source VARCHAR(20) NOT NULL DEFAULT 'autosave',
+                snapshot_hash CHAR(64) NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_version_note (note_id, created_at),
+                CONSTRAINT fk_versions_note FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $settingColumns = [
+            'backup_enabled' => "TINYINT(1) NOT NULL DEFAULT 1",
+            'backup_interval_hours' => "SMALLINT UNSIGNED NOT NULL DEFAULT 24",
+            'backup_keep' => "SMALLINT UNSIGNED NOT NULL DEFAULT 7",
+            'backup_last_at' => "DATETIME NULL",
+        ];
+        foreach ($settingColumns as $column => $definition) {
+            if (!db()->query("SHOW COLUMNS FROM settings LIKE " . db()->quote($column))->fetch()) {
+                db()->exec("ALTER TABLE settings ADD COLUMN $column $definition");
+            }
+        }
         // Trashed notes are purged for good after 30 days.
         db()->exec("DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)");
     } catch (Throwable) {
         // Fresh installs get the columns from the installer schema.
+    }
+}
+
+function valid_backup_datetime(mixed $value): ?string {
+    if (!is_string($value) || $value === '') return null;
+    $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $value);
+    return $date && $date->format('Y-m-d H:i:s') === $value ? $value : null;
+}
+
+// A portable workspace backup intentionally excludes passwords and public
+// share tokens. Those credentials must never travel inside an export file.
+function workspace_backup_payload(): array {
+    $settings = db()->query(
+        "SELECT app_name, backup_enabled, backup_interval_hours, backup_keep FROM settings WHERE id = 1"
+    )->fetch() ?: [];
+    return [
+        'format' => 'memoir-workspace',
+        'schema_version' => 1,
+        'exported_at' => gmdate('c'),
+        'app_version' => MEMOIR_VERSION,
+        'settings' => $settings,
+        'folders' => db()->query(
+            "SELECT id, name, icon, color, sort_order, created_at, updated_at FROM folders ORDER BY sort_order, id"
+        )->fetchAll(),
+        'notes' => db()->query(
+            "SELECT id, folder_id, title, content, color, tags, icon, is_pinned, deleted_at, created_at, updated_at FROM notes ORDER BY id"
+        )->fetchAll(),
+        'versions' => db()->query(
+            "SELECT id, note_id, folder_id, title, content, color, tags, icon, is_pinned, source, snapshot_hash, created_at FROM note_versions ORDER BY id"
+        )->fetchAll(),
+    ];
+}
+
+function write_workspace_backup(string $reason = 'automatic'): string {
+    $directory = __DIR__ . '/storage/backups';
+    if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) {
+        throw new RuntimeException('Could not create the backup directory.');
+    }
+    $stamp = gmdate('Ymd-His');
+    $safeReason = preg_replace('/[^a-z0-9-]+/i', '-', $reason) ?: 'backup';
+    $filename = "memoir-$safeReason-$stamp-" . bin2hex(random_bytes(3)) . '.json';
+    $target = $directory . '/' . $filename;
+    $temporary = $target . '.tmp';
+    $json = json_encode(workspace_backup_payload(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    if (file_put_contents($temporary, $json, LOCK_EX) === false || !rename($temporary, $target)) {
+        @unlink($temporary);
+        throw new RuntimeException('Could not write the backup file.');
+    }
+    @chmod($target, 0640);
+    return $filename;
+}
+
+// Request-driven scheduling works on shared hosting without cron: the first
+// authenticated request after the interval creates the next backup.
+function maybe_create_automatic_backup(): void {
+    try {
+        $settings = db()->query(
+            "SELECT backup_enabled, backup_interval_hours, backup_keep, backup_last_at FROM settings WHERE id = 1"
+        )->fetch();
+        if (!$settings || !(int) $settings['backup_enabled']) return;
+        $hours = max(1, min(720, (int) $settings['backup_interval_hours']));
+        if (!empty($settings['backup_last_at']) && strtotime($settings['backup_last_at']) > time() - ($hours * 3600)) return;
+
+        $lockName = 'memoir_workspace_backup';
+        $lock = db()->prepare('SELECT GET_LOCK(?, 0)');
+        $lock->execute([$lockName]);
+        if ((int) $lock->fetchColumn() !== 1) return;
+        try {
+            write_workspace_backup('automatic');
+            db()->exec("UPDATE settings SET backup_last_at = NOW() WHERE id = 1");
+            $keep = max(1, min(50, (int) $settings['backup_keep']));
+            $files = glob(__DIR__ . '/storage/backups/memoir-automatic-*.json') ?: [];
+            rsort($files, SORT_STRING);
+            foreach (array_slice($files, $keep) as $old) {
+                if (is_file($old)) @unlink($old);
+            }
+        } finally {
+            $release = db()->prepare('SELECT RELEASE_LOCK(?)');
+            $release->execute([$lockName]);
+        }
+    } catch (Throwable) {
+        // A backup failure must not make the note application unavailable.
     }
 }
 

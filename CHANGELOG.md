@@ -3,6 +3,26 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] - 2026-09-01
+
+### Added
+
+- Version history keeps up to 100 coalesced snapshots per note, offers a safe
+  preview, and preserves the current content before restoring an older version.
+- Portable workspace backups include folders, notes, Trash, and version
+  history while excluding credentials and share tokens. Settings now provides
+  downloads, request-driven automatic server backups with retention, manual
+  server snapshots, validated restore, and a mandatory pre-restore safety copy.
+- Advanced search supports field, pin, location, and updated-date filters plus
+  query operators such as `tag:`, `folder:`, `is:`, `before:`, `after:`, and
+  `in:`. Active filters are bookmarkable and visible above the note list.
+
+### Security
+
+- Backup restore validates sizes, structure, identifiers, dates, colors,
+  icons, tags, and note HTML before transactional replacement. Public share
+  tokens and SMTP credentials never enter exported workspace files.
+
 ## [1.6.0] - 2026-09-01
 
 ### Added
