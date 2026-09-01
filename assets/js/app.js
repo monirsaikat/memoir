@@ -31,6 +31,7 @@
   const noteCache = new Map(
     (window.MEMOIR.initialNotes || []).map(note => [String(note.id), note])
   );
+  const referenceCache = new Map();
   let listRequestSequence = 0;
   let noteRequestSequence = 0;
   const advancedFilters = { scope: 'all', pinned: '', state: '', after: '', before: '' };
@@ -88,20 +89,84 @@
   // Note loading, list rendering, autosave
   // ---------------------------------------------------------------------
 
-  function renderBacklinks(backlinks = []) {
-    $('#backlinks').classList.toggle(
-      'hidden',
-      !backlinks.length
-    );
-
-    $('#backlinkList').innerHTML = backlinks.map(b =>
-      `<button type="button" data-id="${b.id}">
-        ${escapeHtml(b.title || 'Untitled note')}
-      </button>`
-    ).join('');
+  function referenceExcerpt(content, needle) {
+    const text = stripHtml(content).replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    const index = needle ? text.toLocaleLowerCase().indexOf(needle.toLocaleLowerCase()) : -1;
+    if (index < 0) return text.slice(0, 150) + (text.length > 150 ? '…' : '');
+    const start = Math.max(0, index - 72);
+    const end = Math.min(text.length, index + needle.length + 72);
+    return `${start ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}`;
   }
 
-  function renderNote(note, backlinks = [], push = true) {
+  function localReferencesFor(note) {
+    const key = String(note.id);
+    const targetTitle = String(note.title || '').trim();
+    const linked = [];
+    const unlinked = [];
+    [...noteCache.values()].forEach(source => {
+      if (source.deleted_at || String(source.id) === key || source._content_cached === false) return;
+      const content = String(source.content || '');
+      const hasLink = content.includes(`data-note-link="${key}"`);
+      if (hasLink) {
+        linked.push({
+          id: source.id,
+          title: source.title,
+          folder_name: source.folder_name,
+          excerpt: referenceExcerpt(content, targetTitle),
+        });
+        return;
+      }
+      if (targetTitle.length < 3) return;
+      const plain = stripHtml(content).replace(/\s+/g, ' ');
+      const foldedPlain = plain.toLocaleLowerCase();
+      const foldedTitle = targetTitle.toLocaleLowerCase();
+      let position = foldedPlain.indexOf(foldedTitle);
+      let exactMention = false;
+      while (position >= 0) {
+        const before = position > 0 ? plain[position - 1] : '';
+        const after = plain[position + targetTitle.length] || '';
+        if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after)) {
+          exactMention = true;
+          break;
+        }
+        position = foldedPlain.indexOf(foldedTitle, position + foldedTitle.length);
+      }
+      if (exactMention) {
+        unlinked.push({
+          id: source.id,
+          title: source.title,
+          folder_name: source.folder_name,
+          excerpt: referenceExcerpt(content, targetTitle),
+        });
+      }
+    });
+    return { linked: linked.slice(0, 20), unlinked: unlinked.slice(0, 20) };
+  }
+
+  function renderReferences(references = {}) {
+    const linked = Array.isArray(references) ? references : (references.linked || []);
+    const unlinked = Array.isArray(references) ? [] : (references.unlinked || []);
+    const renderItems = items => items.map(item =>
+      `<button type="button" class="reference-item" data-id="${item.id}">
+        <span class="reference-item-top">
+          <strong>${escapeHtml(item.title || 'Untitled note')}</strong>
+          <span>${escapeHtml(item.folder_name || 'Unfiled')}</span>
+        </span>
+        ${item.excerpt ? `<span class="reference-excerpt">${escapeHtml(item.excerpt)}</span>` : ''}
+      </button>`
+    ).join('');
+
+    $('#linkedReferenceCount').textContent = linked.length;
+    $('#unlinkedReferenceCount').textContent = unlinked.length;
+    $('#backlinkList').innerHTML = renderItems(linked);
+    $('#unlinkedMentionList').innerHTML = renderItems(unlinked);
+    $('#linkedReferences').classList.toggle('hidden', !linked.length);
+    $('#unlinkedReferences').classList.toggle('hidden', !unlinked.length);
+    $('#backlinks').classList.toggle('hidden', !linked.length && !unlinked.length);
+  }
+
+  function renderNote(note, references = {}, push = true) {
     current = note;
     noteCache.set(String(note.id), note);
 
@@ -141,7 +206,7 @@
     updateWords();
     scheduleHighlightCode();
 
-    renderBacklinks(backlinks);
+    renderReferences(references);
 
     $$('.note-card').forEach(card => {
       card.classList.toggle(
@@ -157,6 +222,19 @@
     syncUrl(push);
   }
 
+  function refreshReferences(key, requestSequence, delay = 0) {
+    setTimeout(async () => {
+      try {
+        const data = await api('references', { query: `&id=${encodeURIComponent(key)}` });
+        const references = data.references || data.backlinks || [];
+        referenceCache.set(String(key), references);
+        if (requestSequence === noteRequestSequence && String(current?.id) === String(key)) {
+          renderReferences(references);
+        }
+      } catch {}
+    }, delay);
+  }
+
 
   async function loadNote(id, push = true) {
     // Capture a pending edit before switching current to another note. The
@@ -170,28 +248,16 @@
 
     // index.php already loaded the first 100 notes. Reusing that data makes a
     // card click render in the same frame instead of waiting for shared-hosting
-    // latency. The background request only refreshes data/backlinks.
+    // latency. Reference discovery can then run independently after paint.
     if (hasCachedContent) {
-      const localBacklinks = [...noteCache.values()]
-        .filter(note => !note.deleted_at && String(note.id) !== key
-          && String(note.content || '').includes(`data-note-link="${key}"`))
-        .map(note => ({ id: note.id, title: note.title }))
-        .slice(0, 20);
-      renderNote(cached, localBacklinks, push);
-      if ((window.MEMOIR.initialActiveComplete && window.MEMOIR.initialContentComplete) || cached._server_fresh) return;
-
-      // Give the instant render a paint before refreshing backlinks/data.
-      setTimeout(async () => {
-        try {
-          const d = await api('note', { query: `&id=${encodeURIComponent(id)}` });
-          d.note._content_cached = true;
-          d.note._server_fresh = true;
-          noteCache.set(key, d.note);
-          if (requestSequence === noteRequestSequence && String(current?.id) === key) {
-            renderBacklinks(d.backlinks || []);
-          }
-        } catch {}
-      }, 150);
+      const localReferences = referenceCache.get(key) || localReferencesFor(cached);
+      renderNote(cached, localReferences, push);
+      if (window.MEMOIR.initialActiveComplete && window.MEMOIR.initialContentComplete) {
+        referenceCache.set(key, localReferences);
+        return;
+      }
+      // Reference discovery is intentionally lazy so it never delays opening.
+      refreshReferences(key, requestSequence, 150);
       return;
     }
 
@@ -200,7 +266,8 @@
     d.note._server_fresh = true;
     noteCache.set(key, d.note);
     if (requestSequence !== noteRequestSequence || String(current?.id) !== key) return;
-    renderNote(d.note, d.backlinks || [], push);
+    renderNote(d.note, referenceCache.get(key) || {}, push);
+    refreshReferences(key, requestSequence, 0);
   }
 
   // Trashed notes open read-only, with a banner offering restore/destroy.
@@ -379,7 +446,14 @@
     try {
       await request;
 
-      if (String(current?.id) === savingId) $('#saveStatus').textContent = 'Saved';
+      referenceCache.clear();
+      if (String(current?.id) === savingId) {
+        $('#saveStatus').textContent = 'Saved';
+        renderReferences(localReferencesFor(current));
+        if (!window.MEMOIR.initialContentComplete) {
+          refreshReferences(savingId, noteRequestSequence, 0);
+        }
+      }
 
       refreshList().catch(() => {});
     } catch (e) {
@@ -482,7 +556,7 @@
       // Immediately open the note returned by create-note.
       renderNote(
         d.note,
-        d.backlinks || [],
+        d.references || d.backlinks || [],
         true
       );
 
@@ -1937,9 +2011,25 @@
   // Quick switcher (Ctrl+P)
   // ---------------------------------------------------------------------
 
-  let switcherCache = [];
+  let switcherCache = (window.MEMOIR.initialNotes || []).map(note => ({
+    id: note.id,
+    title: note.title,
+    folder_name: note.folder_name,
+    updated_at: note.updated_at,
+  }));
+  let switcherComplete = !!window.MEMOIR.initialActiveComplete;
   let paletteMatches = [];
   let paletteIndex = 0;
+
+  async function ensureSwitcherCache() {
+    if (switcherComplete) return;
+    try {
+      switcherCache = (await api('switcher')).notes;
+      switcherComplete = true;
+    } catch {
+      // Keep the initial page cache available while offline.
+    }
+  }
 
   function renderPalette(q) {
     const ql = q.trim().toLowerCase();
@@ -1979,11 +2069,7 @@
   async function openPalette() {
     $('#palette').classList.remove('hidden');
     $('#paletteInput').value = '';
-    try {
-      switcherCache = (await api('switcher')).notes;
-    } catch {
-      switcherCache = [];
-    }
+    await ensureSwitcherCache();
     renderPalette('');
     $('#paletteInput').focus();
   }
@@ -2035,6 +2121,18 @@
     return { node, start: m.index, offset: sel.anchorOffset, query: m[1] };
   }
 
+  function closedWikiContext() {
+    const sel = getSelection();
+    if (!sel.rangeCount || !sel.isCollapsed) return null;
+    const node = sel.anchorNode;
+    if (node.nodeType !== Node.TEXT_NODE || !editor.contains(node)) return null;
+    if (node.parentElement.closest('pre, code, a')) return null;
+    const upto = node.textContent.slice(0, sel.anchorOffset);
+    const match = /\[\[([^\[\]\n]+)\]\]$/.exec(upto);
+    if (!match) return null;
+    return { node, start: match.index, offset: sel.anchorOffset, query: match[1] };
+  }
+
   function closeWikiMenu() {
     wikiMenu.classList.add('hidden');
     wikiCtx = null;
@@ -2044,25 +2142,57 @@
     const ql = wikiCtx.query.trim().toLowerCase();
     wikiMatches = switcherCache
       .filter(n => String(n.id) !== String(current?.id))
-      .filter(n => !ql || (n.title || 'untitled note').toLowerCase().includes(ql))
+      .map(n => {
+        const title = (n.title || 'Untitled note').toLowerCase();
+        const folder = (n.folder_name || 'Unfiled').toLowerCase();
+        const words = ql.split(/\s+/).filter(Boolean);
+        let score = 0;
+        if (!ql) score = 1;
+        else if (title === ql) score = 100;
+        else if (title.startsWith(ql)) score = 80;
+        else if (title.includes(ql)) score = 60;
+        else if (words.every(word => title.includes(word))) score = 40;
+        else if (folder.includes(ql)) score = 20;
+        return { note: n, score };
+      })
+      .filter(result => result.score > 0)
+      .sort((a, b) => b.score - a.score)
       .slice(0, 8);
+    wikiMatches = wikiMatches.map(result => result.note);
     wikiIndex = 0;
     wikiMenu.innerHTML = wikiMatches.map((n, i) =>
-      `<button type="button" data-id="${n.id}" class="${i === 0 ? 'checked' : ''}"><i class="fa-regular fa-note-sticky"></i> ${escapeHtml(n.title || 'Untitled note')}</button>`
+      `<button type="button" data-id="${n.id}" class="${i === 0 ? 'checked' : ''}">
+        <i class="fa-regular fa-note-sticky"></i>
+        <span class="wiki-result-copy">
+          <strong>${markMatches(n.title || 'Untitled note', wikiCtx.query.trim())}</strong>
+          <small>${escapeHtml(n.folder_name || 'Unfiled')}</small>
+        </span>
+      </button>`
     ).join('') || '<div class="wiki-empty">No matching notes</div>';
   }
 
   async function updateWikiMenu() {
+    let closed = closedWikiContext();
+    if (closed) {
+      await ensureSwitcherCache();
+      closed = closedWikiContext();
+      if (!closed) return;
+      const title = closed.query.trim().toLocaleLowerCase();
+      const exact = switcherCache.find(note =>
+        String(note.id) !== String(current?.id)
+        && (note.title || 'Untitled note').trim().toLocaleLowerCase() === title
+      );
+      if (exact) insertWikiLink(exact, closed);
+      else closeWikiMenu();
+      return;
+    }
+
     wikiCtx = wikiContext();
     if (!wikiCtx) return closeWikiMenu();
-    if (!switcherCache.length) {
-      try {
-        switcherCache = (await api('switcher')).notes;
-      } catch {}
-      // The caret may have moved while fetching.
-      wikiCtx = wikiContext();
-      if (!wikiCtx) return closeWikiMenu();
-    }
+    await ensureSwitcherCache();
+    // The caret may have moved while fetching.
+    wikiCtx = wikiContext();
+    if (!wikiCtx) return closeWikiMenu();
     renderWikiMenu();
     const sel = getSelection();
     const rect = sel.getRangeAt(0).getBoundingClientRect();
@@ -2073,11 +2203,11 @@
     wikiMenu.style.left = `${left}px`;
   }
 
-  function insertWikiLink(noteRef) {
-    if (!wikiCtx) return;
+  function insertWikiLink(noteRef, context = wikiCtx) {
+    if (!context) return;
     const range = document.createRange();
-    range.setStart(wikiCtx.node, wikiCtx.start);
-    range.setEnd(wikiCtx.node, wikiCtx.offset);
+    range.setStart(context.node, context.start);
+    range.setEnd(context.node, context.offset);
     range.deleteContents();
     const link = document.createElement('a');
     link.dataset.noteLink = noteRef.id;
@@ -2110,7 +2240,7 @@
     loadNote(link.dataset.noteLink);
   });
 
-  $('#backlinkList').addEventListener('click', e => {
+  $('#backlinks').addEventListener('click', e => {
     const btn = e.target.closest('button[data-id]');
     if (btn) loadNote(btn.dataset.id);
   });

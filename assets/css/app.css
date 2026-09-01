@@ -2580,6 +2580,27 @@ html[data-theme="sepia"] .mini-menu { background: #faf4e4; border-color: #d7c9a7
 }
 
 /* Wiki suggestion menu highlights */
+#wikiMenu {
+    width: min(340px, calc(100vw - 20px));
+    max-height: 300px;
+}
+#wikiMenu button { align-items: flex-start; }
+#wikiMenu button > i { margin-top: 3px; }
+#wikiMenu .wiki-result-copy {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+#wikiMenu .wiki-result-copy strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12.5px;
+}
+#wikiMenu .wiki-result-copy small {
+    color: var(--muted);
+    font-size: 10.5px;
+}
 #wikiMenu .wiki-empty {
     padding: 10px 12px;
     color: var(--muted);
@@ -2679,42 +2700,90 @@ html[data-mode="dark"] #shareNote.active {
     .backup-schedule { grid-template-columns: 1fr; }
 }
 
-/* Backlinks strip under the editor */
-.backlinks {
+/* Linked references and unlinked mentions under the editor */
+.references {
     flex: 0 0 auto;
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 10px 0 12px;
+    display: grid;
+    gap: 18px;
+    padding: 18px 0 24px;
     border-top: 1px solid var(--line);
 }
-.backlinks-label {
+.reference-group { display: grid; gap: 8px; }
+.reference-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
     color: var(--muted);
+}
+.reference-heading > span:first-child {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
 }
-.backlink-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-.backlink-list button {
-    border: 1px solid var(--line);
-    background: transparent;
+.reference-count {
+    min-width: 20px;
+    padding: 2px 6px;
     border-radius: 999px;
-    padding: 4px 11px;
-    font-size: 12px;
-    color: var(--ink);
-    transition: background .12s ease, border-color .12s ease;
+    background: var(--panel2);
+    text-align: center;
+    font-size: 10px;
 }
-.backlink-list button:hover {
+.reference-help {
+    margin: -2px 0 2px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+.reference-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    gap: 7px;
+}
+.reference-item {
+    border: 1px solid var(--line);
+    background: var(--panel2);
+    border-radius: 10px;
+    padding: 9px 11px;
+    text-align: left;
+    color: var(--ink);
+    display: grid;
+    gap: 5px;
+    transition: background .12s ease, border-color .12s ease, transform .12s ease;
+}
+.reference-item:hover {
     background: color-mix(in srgb, var(--accent) 9%, transparent);
     border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-    color: var(--accent);
+    transform: translateY(-1px);
+}
+.reference-item-top {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.reference-item-top strong {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+}
+.reference-item-top > span {
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-size: 10px;
+}
+.reference-excerpt {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.45;
 }

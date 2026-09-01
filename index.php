@@ -396,9 +396,22 @@ $clientNotes = array_map(static function (array $note) use (&$clientContentBudge
 
                 <div id="noteContent" class="rich-editor" contenteditable="true" spellcheck="true"></div>
 
-                <div class="backlinks hidden" id="backlinks">
-                    <span class="backlinks-label"><i class="fa-solid fa-arrow-turn-up"></i> Linked from</span>
-                    <div class="backlink-list" id="backlinkList"></div>
+                <div class="references hidden" id="backlinks">
+                    <section class="reference-group hidden" id="linkedReferences">
+                        <div class="reference-heading">
+                            <span><i class="fa-solid fa-arrow-turn-up"></i> Linked references</span>
+                            <span class="reference-count" id="linkedReferenceCount">0</span>
+                        </div>
+                        <div class="reference-list" id="backlinkList"></div>
+                    </section>
+                    <section class="reference-group hidden" id="unlinkedReferences">
+                        <div class="reference-heading">
+                            <span><i class="fa-solid fa-magnifying-glass"></i> Unlinked mentions</span>
+                            <span class="reference-count" id="unlinkedReferenceCount">0</span>
+                        </div>
+                        <p class="reference-help">These notes mention this title in plain text but do not link to it yet.</p>
+                        <div class="reference-list" id="unlinkedMentionList"></div>
+                    </section>
                 </div>
             </div>
 

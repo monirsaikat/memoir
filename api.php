@@ -99,6 +99,29 @@ function valid_date_filter(string $value): ?string {
     return $date && $date->format('Y-m-d') === $value ? $value : null;
 }
 
+function note_plain_text(string $html): string {
+    $text = preg_replace('/<\/?(?:p|div|h[1-6]|li|blockquote|pre|br|hr|tr|table)\b[^>]*>/iu', ' ', $html);
+    $text = html_entity_decode(strip_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    return trim((string) preg_replace('/\s+/u', ' ', $text));
+}
+
+function note_reference_excerpt(string $html, string $needle, int $radius = 72): string {
+    $text = note_plain_text($html);
+    if ($text === '') return '';
+    $position = $needle !== '' ? mb_stripos($text, $needle, 0, 'UTF-8') : false;
+    if ($position === false) return mb_strimwidth($text, 0, 150, '…', 'UTF-8');
+    $start = max(0, $position - $radius);
+    $excerpt = mb_substr($text, $start, mb_strlen($needle) + ($radius * 2), 'UTF-8');
+    return ($start > 0 ? '…' : '') . $excerpt . ($start + mb_strlen($excerpt) < mb_strlen($text) ? '…' : '');
+}
+
+function note_contains_unlinked_title(string $plainText, string $title): bool {
+    $title = trim($title);
+    if (mb_strlen($title, 'UTF-8') < 3) return false;
+    $pattern = '/(?<![\p{L}\p{N}])' . preg_quote($title, '/') . '(?![\p{L}\p{N}])/iu';
+    return preg_match($pattern, $plainText) === 1;
+}
+
 // maybe_create_automatic_backup();
 
 switch ($action) {
@@ -120,15 +143,87 @@ case 'note':
         json_response(['ok' => false, 'message' => 'Note not found'], 404);
     }
 
-    // Notes whose content links here with a wiki link.
+    // Reference discovery can scan candidate note bodies, so it lives in a
+    // separate lazy endpoint and never delays opening the note itself.
+    json_response([
+        'ok' => true,
+        'note' => $note,
+        'backlinks' => [],
+        'references' => ['linked' => [], 'unlinked' => []],
+    ]);
+
+case 'references':
+    require_method('GET');
+    $id = (int) ($_GET['id'] ?? 0);
+    $noteStmt = db()->prepare("SELECT id, title FROM notes WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+    $noteStmt->execute([$id]);
+    $note = $noteStmt->fetch();
+    if (!$note) json_response(['ok' => false, 'message' => 'Note not found'], 404);
+
+    // Notes whose content links here with a wiki link, including enough
+    // context to make the backlink useful without opening every result.
     $stmt = db()->prepare(
-        "SELECT id, title FROM notes
-         WHERE deleted_at IS NULL AND id != ? AND content LIKE ?
-         ORDER BY updated_at DESC LIMIT 20"
+        "SELECT n.id, n.title, n.content, n.updated_at, f.name folder_name
+         FROM notes n
+         LEFT JOIN folders f ON f.id = n.folder_id
+         WHERE n.deleted_at IS NULL AND n.id != ? AND n.content LIKE ?
+         ORDER BY n.updated_at DESC LIMIT 20"
     );
     $stmt->execute([$id, '%data-note-link="' . $id . '"%']);
+    $linked = array_map(static function (array $row) use ($note): array {
+        $label = (string) $note['title'];
+        if (preg_match('/<a\b[^>]*data-note-link=["\']' . preg_quote((string) $note['id'], '/') . '["\'][^>]*>(.*?)<\/a>/isu', (string) $row['content'], $match)) {
+            $label = note_plain_text($match[1]) ?: $label;
+        }
+        return [
+            'id' => (int) $row['id'],
+            'title' => $row['title'],
+            'folder_name' => $row['folder_name'],
+            'excerpt' => note_reference_excerpt((string) $row['content'], $label),
+            'updated_at' => $row['updated_at'],
+        ];
+    }, $stmt->fetchAll());
 
-    json_response(['ok' => true, 'note' => $note, 'backlinks' => $stmt->fetchAll()]);
+    // Unlinked mentions are exact, case-insensitive title occurrences in the
+    // visible text of another note. SQL narrows candidates; PHP verifies text
+    // boundaries after removing markup and entities.
+    $unlinked = [];
+    $targetTitle = trim((string) $note['title']);
+    if (mb_strlen($targetTitle, 'UTF-8') >= 3) {
+        preg_match('/[\p{L}\p{N}]{3,}/u', $targetTitle, $tokenMatch);
+        $candidateSql =
+            "SELECT n.id, n.title, n.content, n.updated_at, f.name folder_name
+             FROM notes n
+             LEFT JOIN folders f ON f.id = n.folder_id
+             WHERE n.deleted_at IS NULL AND n.id != ?
+               AND n.content NOT LIKE ?";
+        $candidateParams = [$id, '%data-note-link="' . $id . '"%'];
+        if (!empty($tokenMatch[0])) {
+            $candidateSql .= " AND n.content LIKE ? ESCAPE '\\\\'";
+            $candidateParams[] = '%' . addcslashes($tokenMatch[0], '%_\\') . '%';
+        }
+        $candidateSql .= ' ORDER BY n.updated_at DESC LIMIT 200';
+        $candidateStmt = db()->prepare($candidateSql);
+        $candidateStmt->execute($candidateParams);
+        foreach ($candidateStmt->fetchAll() as $row) {
+            $plainText = note_plain_text((string) $row['content']);
+            if (!note_contains_unlinked_title($plainText, $targetTitle)) continue;
+            $unlinked[] = [
+                'id' => (int) $row['id'],
+                'title' => $row['title'],
+                'folder_name' => $row['folder_name'],
+                'excerpt' => note_reference_excerpt((string) $row['content'], $targetTitle),
+                'updated_at' => $row['updated_at'],
+            ];
+            if (count($unlinked) >= 20) break;
+        }
+    }
+
+    json_response([
+        'ok' => true,
+        'backlinks' => $linked,
+        'references' => ['linked' => $linked, 'unlinked' => $unlinked],
+    ]);
 
 case 'switcher':
     require_method('GET');
@@ -182,6 +277,7 @@ case 'create-note':
         'id' => $id,
         'note' => $note,
         'backlinks' => [],
+        'references' => ['linked' => [], 'unlinked' => []],
     ]);
 
 case 'save-note':
