@@ -2127,7 +2127,7 @@
   }
 
   // Each flavor rides on a light or dark base mode.
-  const THEME_MODES = { light: 'light', dark: 'dark', sepia: 'light', ocean: 'dark', midnight: 'dark' };
+  const THEME_MODES = { light: 'light', dark: 'dark', sepia: 'light', ocean: 'dark', midnight: 'dark', forest: 'dark', dusk: 'dark', paper: 'light' };
 
   function applyTheme(choice) {
     let flavor = choice === 'system'
