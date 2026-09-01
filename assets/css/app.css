@@ -1388,6 +1388,12 @@ button { cursor: pointer; }
     font-size: 10px;
     margin-top: 22px;
 }
+.auth-link {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+.auth-link:hover { text-decoration: underline; }
 
 .notice {
     padding: 11px 12px;

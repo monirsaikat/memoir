@@ -3,6 +3,16 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-09-01
+
+### Added
+
+- Forgot-password flow: request a reset link from the sign-in page, delivered
+  through the configured SMTP settings by a new dependency-free SMTP client
+  (TLS/SSL, AUTH LOGIN). Tokens are stored hashed, valid for 45 minutes,
+  single-use, and requests are rate-limited; responses never reveal whether
+  an email address has an account.
+
 ## [1.2.0] - 2026-09-01
 
 ### Added
@@ -120,6 +130,7 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
+[1.3.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.3.0
 [1.2.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.2.0
 [1.1.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.1.0
 [1.0.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.0.0

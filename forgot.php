@@ -3,33 +3,54 @@ declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
 if (auth_user()) { header('Location: index.php'); exit; }
+ensure_schema();
 
+$sent = false;
 $error = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf(false);
+
+    // At most 5 reset requests per 15 minutes per session.
     $attempts = array_values(array_filter(
-        $_SESSION['login_attempts'] ?? [],
-        static fn (int $time): bool => $time > time() - 300
+        $_SESSION['reset_attempts'] ?? [],
+        static fn (int $time): bool => $time > time() - 900
     ));
     if (count($attempts) >= 5) {
         http_response_code(429);
-        $error = 'Too many sign-in attempts. Wait five minutes and try again.';
+        $error = 'Too many reset requests. Wait a while and try again.';
     } else {
+        $attempts[] = time();
+        $_SESSION['reset_attempts'] = $attempts;
+
         $email = strtolower(trim((string) ($_POST['email'] ?? '')));
-        $pass = (string) ($_POST['password'] ?? '');
-        $stmt = db()->prepare('SELECT * FROM users WHERE email=? LIMIT 1');
+        $stmt = db()->prepare('SELECT id, email FROM users WHERE email = ? LIMIT 1');
         $stmt->execute([$email]);
         $user = $stmt->fetch();
-        if ($user && password_verify($pass, $user['password'])) {
-            session_regenerate_id(true);
-            $_SESSION['user_id'] = $user['id'];
-            unset($_SESSION['login_attempts']);
-            header('Location: index.php');
-            exit;
+
+        if ($user) {
+            $token = bin2hex(random_bytes(32));
+            db()->prepare('UPDATE users SET reset_token = ?, reset_expires = DATE_ADD(NOW(), INTERVAL 45 MINUTE) WHERE id = ?')
+                ->execute([hash('sha256', $token), $user['id']]);
+
+            $settings = db()->query('SELECT * FROM settings WHERE id=1')->fetch() ?: [];
+            $link = rtrim($config['app']['url'], '/') . '/reset.php?token=' . $token;
+            $body = "Hello,\n\n"
+                . "A password reset was requested for your Memoir account.\n"
+                . "Open this link within 45 minutes to choose a new password:\n\n"
+                . $link . "\n\n"
+                . "If you did not request this, you can ignore this email — your password is unchanged.\n";
+            try {
+                smtp_send($settings, $user['email'], 'Reset your Memoir password', $body);
+            } catch (Throwable $exception) {
+                // Invalidate the token again if the mail could not go out.
+                db()->prepare('UPDATE users SET reset_token = NULL, reset_expires = NULL WHERE id = ?')
+                    ->execute([$user['id']]);
+                $error = $exception->getMessage();
+            }
         }
-        $attempts[] = time();
-        $_SESSION['login_attempts'] = $attempts;
-        $error = 'Email or password is incorrect.';
+        // The same message regardless of whether the account exists.
+        if ($error === '') $sent = true;
     }
 }
 ?>
@@ -38,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Sign in — Memoir</title>
+    <title>Reset password — Memoir</title>
     <script>
     (function () {
         try {
@@ -67,34 +88,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <main class="auth-card">
     <img class="auth-logo" src="assets/img/memoir-logo.png" alt="Memoir">
-    <h1>Welcome to Memoir</h1>
-    <p>Your notes, quietly kept on your own server.</p>
+    <h1>Reset your password</h1>
+    <p>Enter your account email and we will send you a reset link.</p>
 
-    <?php if (isset($_GET['installed'])): ?>
-    <div class="notice success">Installation complete. Sign in to continue.</div>
-    <?php endif ?>
-
-    <?php if (isset($_GET['reset'])): ?>
-    <div class="notice success">Password updated. Sign in with your new password.</div>
+    <?php if ($sent): ?>
+    <div class="notice success">If that address belongs to an account, a reset link is on its way. Check your inbox.</div>
     <?php endif ?>
 
     <?php if ($error): ?>
     <div class="notice error"><?= e($error) ?></div>
     <?php endif ?>
 
+    <?php if (!$sent): ?>
     <form method="post">
         <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
 
         <label for="email">Email</label>
         <input id="email" type="email" name="email" autocomplete="username" required>
 
-        <label for="password">Password</label>
-        <input id="password" type="password" name="password" autocomplete="current-password" required>
-
-        <button class="primary-btn" type="submit">Sign in</button>
+        <button class="primary-btn" type="submit">Send reset link</button>
     </form>
+    <?php endif ?>
 
-    <div class="auth-foot"><a class="auth-link" href="forgot.php">Forgot password?</a> · Memoir · Self-hosted personal notes</div>
+    <div class="auth-foot"><a class="auth-link" href="login.php">Back to sign in</a></div>
 </main>
 
 </body>

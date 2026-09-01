@@ -93,7 +93,7 @@ function asset(string $path): string {
     return e($path . '?v=' . (is_file($file) ? filemtime($file) : MEMOIR_VERSION));
 }
 
-// Lightweight in-place migration for installs created before tags existed.
+// Lightweight in-place migrations for installs created before newer features.
 function ensure_schema(): void {
     static $checked = false;
     if ($checked) return;
@@ -102,8 +102,85 @@ function ensure_schema(): void {
         if (!db()->query("SHOW COLUMNS FROM notes LIKE 'tags'")->fetch()) {
             db()->exec("ALTER TABLE notes ADD COLUMN tags VARCHAR(500) NOT NULL DEFAULT '' AFTER color");
         }
+        if (!db()->query("SHOW COLUMNS FROM users LIKE 'reset_token'")->fetch()) {
+            db()->exec("ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) NULL, ADD COLUMN reset_expires DATETIME NULL");
+        }
     } catch (Throwable) {
-        // Fresh installs get the column from the installer schema.
+        // Fresh installs get the columns from the installer schema.
+    }
+}
+
+// Minimal SMTP client for transactional mail (password resets). Uses the
+// SMTP settings stored in the settings table; throws on any failure.
+function smtp_send(array $smtp, string $to, string $subject, string $body): void {
+    $host = trim((string) ($smtp['smtp_host'] ?? ''));
+    if ($host === '') {
+        throw new RuntimeException('Email is not configured. Set SMTP details in Settings first.');
+    }
+    $port = (int) ($smtp['smtp_port'] ?? 587);
+    $security = $smtp['smtp_security'] ?? 'tls';
+    $timeout = 12;
+
+    $remote = ($security === 'ssl' ? "ssl://$host" : $host) . ':' . $port;
+    $fp = @stream_socket_client($remote, $errno, $errstr, $timeout);
+    if (!$fp) {
+        throw new RuntimeException('Could not reach the mail server.');
+    }
+    stream_set_timeout($fp, $timeout);
+
+    $read = function () use ($fp): string {
+        $data = '';
+        while (($line = fgets($fp, 515)) !== false) {
+            $data .= $line;
+            if (strlen($line) < 4 || $line[3] !== '-') break;
+        }
+        return $data;
+    };
+    $command = function (string $cmd, array $expect) use ($fp, $read): string {
+        fwrite($fp, $cmd . "\r\n");
+        $resp = $read();
+        if (!in_array((int) substr($resp, 0, 3), $expect, true)) {
+            throw new RuntimeException('Mail server refused: ' . trim(strtok($resp, "\n")));
+        }
+        return $resp;
+    };
+
+    try {
+        $read(); // server greeting
+        $command('EHLO memoir', [250]);
+        if ($security === 'tls') {
+            $command('STARTTLS', [220]);
+            if (!stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                throw new RuntimeException('TLS negotiation with the mail server failed.');
+            }
+            $command('EHLO memoir', [250]);
+        }
+        if (!empty($smtp['smtp_user'])) {
+            $command('AUTH LOGIN', [334]);
+            $command(base64_encode($smtp['smtp_user']), [334]);
+            $command(base64_encode((string) ($smtp['smtp_pass'] ?? '')), [235]);
+        }
+
+        $from = $smtp['smtp_from'] ?: ($smtp['smtp_user'] ?? '');
+        $command("MAIL FROM:<$from>", [250]);
+        $command("RCPT TO:<$to>", [250, 251]);
+        $command('DATA', [354]);
+
+        $headers = "From: Memoir <$from>\r\n"
+            . "To: <$to>\r\n"
+            . 'Subject: =?UTF-8?B?' . base64_encode($subject) . "?=\r\n"
+            . "MIME-Version: 1.0\r\n"
+            . "Content-Type: text/plain; charset=UTF-8\r\n"
+            . 'Date: ' . date('r') . "\r\n";
+        $safeBody = str_replace("\n.", "\n..", str_replace("\r\n", "\n", $body));
+        fwrite($fp, $headers . "\r\n" . str_replace("\n", "\r\n", $safeBody) . "\r\n.\r\n");
+        $resp = $read();
+        if ((int) substr($resp, 0, 3) !== 250) {
+            throw new RuntimeException('The mail was not accepted: ' . trim(strtok($resp, "\n")));
+        }
+        fwrite($fp, "QUIT\r\n");
+    } finally {
+        fclose($fp);
     }
 }
 
