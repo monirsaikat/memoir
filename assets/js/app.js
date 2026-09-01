@@ -83,37 +83,84 @@
   // Note loading, list rendering, autosave
   // ---------------------------------------------------------------------
 
-  async function loadNote(id, push = true) {
-    const d = await api('note', { query: `&id=${id}` });
-    current = d.note;
-    draftStyle = { icon: current.icon || 'fa-note-sticky', color: current.color || '#6F5EE8' };
+  function renderNote(note, backlinks = [], push = true) {
+    current = note;
+
+    draftStyle = {
+      icon: current.icon || 'fa-note-sticky',
+      color: current.color || '#6F5EE8'
+    };
 
     $('#emptyState').classList.add('hidden');
     $('#editorView').classList.remove('hidden');
+
     $('#noteTitle').value = current.title || '';
     $('#noteContent').innerHTML = current.content || '';
     $('#crumbFolder').textContent = current.folder_name || 'Unfiled';
-    $('#updatedAt').textContent = `Updated ${fmtDate(current.updated_at)}`;
-    $('#pinNote').classList.toggle('active', current.is_pinned == 1);
-    $('#shareNote').classList.toggle('active', !!current.share_token);
-    currentTags = (current.tags || '').split(',').filter(Boolean);
+
+    $('#updatedAt').textContent =
+      `Updated ${fmtDate(current.updated_at)}`;
+
+    $('#pinNote').classList.toggle(
+      'active',
+      current.is_pinned == 1
+    );
+
+    $('#shareNote').classList.toggle(
+      'active',
+      !!current.share_token
+    );
+
+    currentTags = (current.tags || '')
+      .split(',')
+      .filter(Boolean);
+
     renderTagChips();
+
     setEditorReadOnly(!!current.deleted_at);
+
     updateWords();
     highlightCode();
 
-    const backlinks = d.backlinks || [];
-    $('#backlinks').classList.toggle('hidden', !backlinks.length);
+    $('#backlinks').classList.toggle(
+      'hidden',
+      !backlinks.length
+    );
+
     $('#backlinkList').innerHTML = backlinks.map(b =>
-      `<button type="button" data-id="${b.id}">${escapeHtml(b.title || 'Untitled note')}</button>`
+      `<button type="button" data-id="${b.id}">
+        ${escapeHtml(b.title || 'Untitled note')}
+      </button>`
     ).join('');
 
-    $$('.note-card').forEach(card => card.classList.toggle('active', card.dataset.id == id));
+    $$('.note-card').forEach(card => {
+      card.classList.toggle(
+        'active',
+        card.dataset.id == current.id
+      );
+    });
 
     if (window.matchMedia('(max-width: 760px)').matches) {
       document.body.classList.add('editor-open');
     }
+
     syncUrl(push);
+  }
+
+
+  async function loadNote(id, push = true) {
+    const d = await api(
+      'note',
+      {
+        query: `&id=${id}`
+      }
+    );
+
+    renderNote(
+      d.note,
+      d.backlinks || [],
+      push
+    );
   }
 
   // Trashed notes open read-only, with a banner offering restore/destroy.
@@ -225,9 +272,11 @@
     savePromise = request;
     try {
       await request;
+      await request;
+
       $('#saveStatus').textContent = 'Saved';
-      await refreshList();
-      refreshSidebar();
+
+      refreshList().catch(() => {});
     } catch (e) {
       $('#saveStatus').textContent = 'Save failed';
     } finally {
@@ -306,7 +355,6 @@
     if (current && selectedIds.has(String(current.id))) closeEditor();
     setSelectMode(false);
     await refreshList();
-    refreshSidebar();
   };
 
   $('#bulkRestore').onclick = async () => {
@@ -315,17 +363,32 @@
     if (current && selectedIds.has(String(current.id))) closeEditor();
     setSelectMode(false);
     await refreshList();
-    refreshSidebar();
   };
 
   $('#newNote').onclick = async () => {
-    const d = await api('create-note', {
-      method: 'POST',
-      body: JSON.stringify({ folder_id: filterFolder || null }),
-    });
-    await refreshList();
-    await loadNote(d.id);
-    $('#noteTitle').focus();
+    try {
+      const d = await api('create-note', {
+        method: 'POST',
+        body: JSON.stringify({
+          folder_id: filterFolder || null
+        }),
+      });
+
+      // Immediately open the note returned by create-note.
+      renderNote(
+        d.note,
+        d.backlinks || [],
+        true
+      );
+
+      $('#noteTitle').focus();
+
+      // Refresh secondary UI without blocking the editor.
+      refreshList().catch(() => {}); 
+
+    } catch (err) {
+      console.error('Could not create note:', err);
+    }
   };
 
   $('#noteTitle').addEventListener('input', queueSave);
@@ -349,7 +412,6 @@
     await api('delete-note', { method: 'POST', body: JSON.stringify({ id: current.id }) });
     closeEditor();
     await refreshList();
-    refreshSidebar();
   };
 
   $('#restoreNote').onclick = async () => {
@@ -357,7 +419,6 @@
     await api('restore-notes', { method: 'POST', body: JSON.stringify({ ids: [current.id] }) });
     const id = current.id;
     await refreshList();
-    refreshSidebar();
     await loadNote(id, false);
   };
 
@@ -366,7 +427,6 @@
     await api('destroy-notes', { method: 'POST', body: JSON.stringify({ ids: [current.id] }) });
     closeEditor();
     await refreshList();
-    refreshSidebar();
   };
 
   // ---------------------------------------------------------------------
@@ -1526,7 +1586,6 @@
       closeModal($('#historyModal'));
       await loadNote(noteId, false);
       await refreshList();
-      refreshSidebar();
     } catch (err) {
       status.textContent = err.message;
     }
@@ -1675,7 +1734,6 @@
           $('#crumbFolder').textContent = 'Unfiled';
         }
         await refreshList();
-        refreshSidebar();
         break;
       }
     }
@@ -1990,28 +2048,63 @@
   // Import (Settings → Data)
   // ---------------------------------------------------------------------
 
-  $('#importBtn').onclick = () => $('#importFiles').click();
+  $('#importBtn').onclick = () => {
+    $('#importFiles').click();
+  };
 
   $('#importFiles').addEventListener('change', async e => {
-    const files = [...e.target.files];
-    if (!files.length) return;
-    const status = $('#importStatus');
-    status.className = 'pw-status';
-    status.textContent = `Importing ${files.length} file${files.length > 1 ? 's' : ''}…`;
-    const fd = new FormData();
-    files.forEach(f => fd.append('files[]', f));
-    try {
-      const d = await api('import', { method: 'POST', body: fd });
-      status.className = 'pw-status ok';
-      status.textContent = `Imported ${d.imported} note${d.imported === 1 ? '' : 's'}`
-        + (d.skipped ? ` (${d.skipped} skipped)` : '') + '.';
-      await refreshList();
-      refreshSidebar();
-    } catch (err) {
-      status.className = 'pw-status error';
-      status.textContent = err.message;
+    const input = e.target;
+
+    const files = [...input.files];
+
+    if (!files.length) {
+      return;
     }
-    e.target.value = '';
+
+    const status = $('#importStatus');
+
+    status.className = 'pw-status';
+
+    status.textContent =
+      `Importing ${files.length} file${files.length > 1 ? 's' : ''}…`;
+
+    const fd = new FormData();
+
+    files.forEach(file => {
+      fd.append('files[]', file);
+    });
+
+    try {
+
+      const d = await api('import', {
+        method: 'POST',
+        body: fd
+      });
+
+      status.className = 'pw-status ok';
+
+      status.textContent =
+        `Imported ${d.imported} note${d.imported === 1 ? '' : 's'}`
+        + (d.skipped ? ` (${d.skipped} skipped)` : '')
+        + '.';
+
+      // Refresh in background.
+      refreshList().catch(() => {});
+      refreshSidebar();
+
+    } catch (err) {
+
+      status.className = 'pw-status error';
+
+      status.textContent =
+        err.message || 'Import failed.';
+
+    } finally {
+
+      // Important:
+      // allow the same file to be selected again.
+      input.value = '';
+    }
   });
 
   $('#downloadBackup').onclick = () => {

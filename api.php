@@ -94,8 +94,7 @@ function valid_date_filter(string $value): ?string {
     return $date && $date->format('Y-m-d') === $value ? $value : null;
 }
 
-ensure_schema();
-maybe_create_automatic_backup();
+// maybe_create_automatic_backup();
 
 switch ($action) {
 
@@ -140,13 +139,45 @@ case 'switcher':
 
 case 'create-note':
     require_method('POST');
+
     $data = request_json();
-    $folder = !empty($data['folder_id']) ? (int) $data['folder_id'] : null;
+    $folder = !empty($data['folder_id'])
+        ? (int) $data['folder_id']
+        : null;
 
-    $stmt = db()->prepare("INSERT INTO notes(folder_id, title, content) VALUES(?, ?, ?)");
-    $stmt->execute([$folder, 'Untitled note', '']);
+    $stmt = db()->prepare(
+        "INSERT INTO notes(folder_id, title, content)
+         VALUES(?, ?, ?)"
+    );
 
-    json_response(['ok' => true, 'id' => (int) db()->lastInsertId()]);
+    $stmt->execute([
+        $folder,
+        'Untitled note',
+        ''
+    ]);
+
+    $id = (int) db()->lastInsertId();
+
+    $stmt = db()->prepare(
+        "SELECT
+            n.*,
+            f.name AS folder_name
+         FROM notes n
+         LEFT JOIN folders f ON f.id = n.folder_id
+         WHERE n.id = ?
+         LIMIT 1"
+    );
+
+    $stmt->execute([$id]);
+
+    $note = $stmt->fetch();
+
+    json_response([
+        'ok' => true,
+        'id' => $id,
+        'note' => $note,
+        'backlinks' => [],
+    ]);
 
 case 'save-note':
     require_method('POST');
