@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 define('MEMOIR_VERSION', trim((string) @file_get_contents(__DIR__ . '/VERSION')) ?: '1.0.0');
+define('MEMOIR_SCHEMA_VERSION', '2026-09-01-1');
 
 ini_set('session.use_strict_mode', '1');
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -98,6 +99,16 @@ function ensure_schema(): void {
     static $checked = false;
     if ($checked) return;
     $checked = true;
+
+    // PHP processes are short lived on shared hosting, so the static guard only
+    // helps within one request. Keep a tiny on-disk marker as well: without it
+    // every page view performs a series of SHOW COLUMNS/INDEX queries and a
+    // CREATE TABLE check before it can render.
+    $marker = __DIR__ . '/storage/.schema-version';
+    if (is_file($marker) && trim((string) @file_get_contents($marker)) === MEMOIR_SCHEMA_VERSION) {
+        return;
+    }
+
     try {
         if (!db()->query("SHOW COLUMNS FROM notes LIKE 'tags'")->fetch()) {
             db()->exec("ALTER TABLE notes ADD COLUMN tags VARCHAR(500) NOT NULL DEFAULT '' AFTER color");
@@ -145,6 +156,12 @@ function ensure_schema(): void {
         }
         // Trashed notes are purged for good after 30 days.
         db()->exec("DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)");
+
+        $temporary = $marker . '.tmp-' . bin2hex(random_bytes(4));
+        if (@file_put_contents($temporary, MEMOIR_SCHEMA_VERSION . PHP_EOL, LOCK_EX) !== false) {
+            @chmod($temporary, 0640);
+            if (!@rename($temporary, $marker)) @unlink($temporary);
+        }
     } catch (Throwable) {
         // Fresh installs get the columns from the installer schema.
     }

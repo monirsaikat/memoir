@@ -2,6 +2,8 @@
 require __DIR__ . '/bootstrap.php';
 
 $user = require_auth();
+$csrfToken = csrf_token();
+if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
 ensure_schema();
 maybe_create_automatic_backup();
 
@@ -41,13 +43,28 @@ function note_preview(string $content): string {
     $text = preg_replace('/\s+/u', ' ', $text);
     return mb_strimwidth($text, 0, 115, '…');
 }
+$clientContentBudget = 2 * 1024 * 1024;
+$allNoteContentCached = true;
+$clientNotes = array_map(static function (array $note) use (&$clientContentBudget, &$allNoteContentCached): array {
+    $note['_preview'] = note_preview((string) ($note['content'] ?? ''));
+    $bytes = strlen((string) ($note['content'] ?? ''));
+    if ($bytes > $clientContentBudget) {
+        $note['content'] = '';
+        $note['_content_cached'] = false;
+        $allNoteContentCached = false;
+    } else {
+        $note['_content_cached'] = true;
+        $clientContentBudget -= $bytes;
+    }
+    return $note;
+}, $notes);
 ?>
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="csrf-token" content="<?= csrf_token() ?>">
+    <meta name="csrf-token" content="<?= e($csrfToken) ?>">
     <title><?= e($settings['app_name'] ?? 'Memoir') ?></title>
     <script>
     // Apply the saved theme before first paint to avoid a light/dark flash.
@@ -156,7 +173,7 @@ function note_preview(string $content): string {
             </button>
             <button id="settingsBtn"><i class="fa-solid fa-sliders"></i> Settings</button>
             <form method="post" action="logout.php">
-                <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+                <input type="hidden" name="_csrf" value="<?= e($csrfToken) ?>">
                 <button type="submit"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out</button>
             </form>
         </div>
@@ -774,9 +791,23 @@ function note_preview(string $content): string {
     </div>
 </div>
 
-<script>window.MEMOIR = {csrf: document.querySelector('meta[name="csrf-token"]').content};</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>window.MEMOIR = {
+    csrf: document.querySelector('meta[name="csrf-token"]').content,
+    initialNotes: <?= json_encode($clientNotes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?>,
+    initialActiveComplete: <?= count($notes) < 100 ? 'true' : 'false' ?>,
+    initialContentComplete: <?= $allNoteContentCached ? 'true' : 'false' ?>
+};</script>
 <script src="<?= asset('assets/js/app.js') ?>"></script>
+<script>
+// Syntax highlighting is useful, but it must not hold the whole application
+// hostage on a slow CDN connection. Load it once the editor is interactive.
+(window.requestIdleCallback || function (fn) { setTimeout(fn, 1); })(function () {
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js';
+    script.onload = function () { window.dispatchEvent(new Event('memoir:highlight-ready')); };
+    document.head.appendChild(script);
+});
+</script>
 <script>
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function () {});

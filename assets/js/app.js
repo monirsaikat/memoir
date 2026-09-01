@@ -28,6 +28,11 @@
   let currentTags = [];      // tags of the open note
   let sortMode = 'updated';  // note list order: updated | created | title
   let lastSearchText = '';
+  const noteCache = new Map(
+    (window.MEMOIR.initialNotes || []).map(note => [String(note.id), note])
+  );
+  let listRequestSequence = 0;
+  let noteRequestSequence = 0;
   const advancedFilters = { scope: 'all', pinned: '', state: '', after: '', before: '' };
   try {
     const stored = localStorage.getItem('memoir-sort');
@@ -83,8 +88,22 @@
   // Note loading, list rendering, autosave
   // ---------------------------------------------------------------------
 
+  function renderBacklinks(backlinks = []) {
+    $('#backlinks').classList.toggle(
+      'hidden',
+      !backlinks.length
+    );
+
+    $('#backlinkList').innerHTML = backlinks.map(b =>
+      `<button type="button" data-id="${b.id}">
+        ${escapeHtml(b.title || 'Untitled note')}
+      </button>`
+    ).join('');
+  }
+
   function renderNote(note, backlinks = [], push = true) {
     current = note;
+    noteCache.set(String(note.id), note);
 
     draftStyle = {
       icon: current.icon || 'fa-note-sticky',
@@ -120,18 +139,9 @@
     setEditorReadOnly(!!current.deleted_at);
 
     updateWords();
-    highlightCode();
+    scheduleHighlightCode();
 
-    $('#backlinks').classList.toggle(
-      'hidden',
-      !backlinks.length
-    );
-
-    $('#backlinkList').innerHTML = backlinks.map(b =>
-      `<button type="button" data-id="${b.id}">
-        ${escapeHtml(b.title || 'Untitled note')}
-      </button>`
-    ).join('');
+    renderBacklinks(backlinks);
 
     $$('.note-card').forEach(card => {
       card.classList.toggle(
@@ -149,18 +159,48 @@
 
 
   async function loadNote(id, push = true) {
-    const d = await api(
-      'note',
-      {
-        query: `&id=${id}`
-      }
-    );
+    // Capture a pending edit before switching current to another note. The
+    // request may finish later; serializing the old draft happens immediately.
+    if (saveTimer) saveNote();
 
-    renderNote(
-      d.note,
-      d.backlinks || [],
-      push
-    );
+    const key = String(id);
+    const cached = noteCache.get(key);
+    const hasCachedContent = cached && cached._content_cached !== false;
+    const requestSequence = ++noteRequestSequence;
+
+    // index.php already loaded the first 100 notes. Reusing that data makes a
+    // card click render in the same frame instead of waiting for shared-hosting
+    // latency. The background request only refreshes data/backlinks.
+    if (hasCachedContent) {
+      const localBacklinks = [...noteCache.values()]
+        .filter(note => !note.deleted_at && String(note.id) !== key
+          && String(note.content || '').includes(`data-note-link="${key}"`))
+        .map(note => ({ id: note.id, title: note.title }))
+        .slice(0, 20);
+      renderNote(cached, localBacklinks, push);
+      if ((window.MEMOIR.initialActiveComplete && window.MEMOIR.initialContentComplete) || cached._server_fresh) return;
+
+      // Give the instant render a paint before refreshing backlinks/data.
+      setTimeout(async () => {
+        try {
+          const d = await api('note', { query: `&id=${encodeURIComponent(id)}` });
+          d.note._content_cached = true;
+          d.note._server_fresh = true;
+          noteCache.set(key, d.note);
+          if (requestSequence === noteRequestSequence && String(current?.id) === key) {
+            renderBacklinks(d.backlinks || []);
+          }
+        } catch {}
+      }, 150);
+      return;
+    }
+
+    const d = await api('note', { query: `&id=${encodeURIComponent(id)}` });
+    d.note._content_cached = true;
+    d.note._server_fresh = true;
+    noteCache.set(key, d.note);
+    if (requestSequence !== noteRequestSequence || String(current?.id) !== key) return;
+    renderNote(d.note, d.backlinks || [], push);
   }
 
   // Trashed notes open read-only, with a banner offering restore/destroy.
@@ -179,7 +219,46 @@
     setEditorReadOnly(false);
   }
 
+  function cachedList() {
+    // Trash is not part of the initial page payload and advanced query
+    // operators need the server parser, so those views stay server-backed.
+    const q = searchInput.value.trim();
+    if (trashView || ['trash', 'all'].includes(advancedFilters.state) || /(?:^|\s)(?:tag|folder|is|before|after|in):/i.test(q)) {
+      return null;
+    }
+    if (q && !window.MEMOIR.initialContentComplete) return null;
+
+    const needle = q.toLocaleLowerCase();
+    const after = advancedFilters.after ? new Date(`${advancedFilters.after}T00:00:00`).getTime() : null;
+    const before = advancedFilters.before ? new Date(`${advancedFilters.before}T00:00:00`).getTime() : null;
+    const rows = [...noteCache.values()].filter(note => {
+      if (note.deleted_at) return false;
+      if (filterFolder !== '' && String(note.folder_id ?? '') !== String(filterFolder)) return false;
+      if (filterTag !== '' && !(note.tags || '').split(',').includes(filterTag)) return false;
+      const wantedPin = advancedFilters.pinned !== '' ? advancedFilters.pinned : (pinnedOnly ? '1' : '');
+      if (wantedPin !== '' && String(Number(note.is_pinned)) !== wantedPin) return false;
+      const updated = new Date(String(note.updated_at || '').replace(' ', 'T')).getTime();
+      if (after && updated < after) return false;
+      if (before && updated >= before) return false;
+      if (!needle) return true;
+      const fields = advancedFilters.scope === 'all'
+        ? [note.title, note.content, note.tags]
+        : [note[advancedFilters.scope]];
+      return fields.some(value => stripHtml(String(value || '')).toLocaleLowerCase().includes(needle));
+    });
+
+    rows.sort((a, b) => {
+      const pinned = Number(b.is_pinned) - Number(a.is_pinned);
+      if (pinned) return pinned;
+      if (sortMode === 'title') return String(a.title).localeCompare(String(b.title));
+      const field = sortMode === 'created' ? 'created_at' : 'updated_at';
+      return String(b[field]).localeCompare(String(a[field]));
+    });
+    return rows.slice(0, 100);
+  }
+
   async function refreshList() {
+    const requestSequence = ++listRequestSequence;
     const q = searchInput.value.trim();
     let query = `&q=${encodeURIComponent(q)}`;
     if (filterFolder !== '') query += `&folder=${encodeURIComponent(filterFolder)}`;
@@ -193,8 +272,26 @@
     if (advancedFilters.after) query += `&after=${advancedFilters.after}`;
     if (advancedFilters.before) query += `&before=${advancedFilters.before}`;
 
+    const immediate = cachedList();
+    if (immediate) {
+      lastSearchText = q;
+      renderNotes(immediate);
+      renderActiveSearchFilters();
+      syncUrl();
+    }
+
+    // With fewer than 100 active notes the initial payload is the complete
+    // dataset. Empty-query folder/tag/pin/sort navigation is exact locally and
+    // needs no API round trip at all.
+    if (immediate && window.MEMOIR.initialActiveComplete && !q && !trashView
+        && !['trash', 'all'].includes(advancedFilters.state)) {
+      return;
+    }
+
     const d = await api('search', { query });
+    if (requestSequence !== listRequestSequence) return;
     lastSearchText = d.query_text || '';
+    d.notes.forEach(note => noteCache.set(String(note.id), note));
     renderNotes(d.notes);
     renderActiveSearchFilters();
     syncUrl();
@@ -220,6 +317,7 @@
   }
 
   function renderNotes(notes) {
+    notes.forEach(note => noteCache.set(String(note.id), note));
     $('#listCount').textContent = `${notes.length} notes`;
 
     if (!notes.length) {
@@ -229,7 +327,9 @@
 
     const q = lastSearchText;
     $('#noteList').innerHTML = notes.map(n => {
-      const snip = previewSnippet(n.content, q);
+      const snip = !q && typeof n._preview === 'string'
+        ? { text: n._preview, leading: false }
+        : previewSnippet(n.content, q);
       return `<button class="note-card ${current && current.id == n.id ? 'active' : ''}${typeof selectedIds !== 'undefined' && selectedIds.has(String(n.id)) ? ' selected' : ''}" data-id="${n.id}" data-folder="${n.folder_id ?? ''}" data-pinned="${n.is_pinned}">
     <div class="note-card-top"><i class="fa-solid ${escapeHtml(n.icon)}" style="color:${escapeHtml(!n.color || n.color.toUpperCase() === '#FFFFFF' ? '#6F5EE8' : n.color)}"></i>${n.is_pinned == 1 ? '<i class="fa-solid fa-thumbtack pin-mini"></i>' : ''}</div>
     <strong>${markMatches(n.title, q)}</strong><p>${snip.leading ? '…' : ''}${markMatches(snip.text, q)}</p>
@@ -268,17 +368,22 @@
       tags: currentTags,
       is_pinned: current.is_pinned,
     };
+    const savingId = String(current.id);
+    Object.assign(current, body, {
+      tags: currentTags.join(','),
+      updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    });
+    noteCache.set(savingId, current);
     const request = api('save-note', { method: 'POST', body: JSON.stringify(body) });
     savePromise = request;
     try {
       await request;
-      await request;
 
-      $('#saveStatus').textContent = 'Saved';
+      if (String(current?.id) === savingId) $('#saveStatus').textContent = 'Saved';
 
       refreshList().catch(() => {});
     } catch (e) {
-      $('#saveStatus').textContent = 'Save failed';
+      if (String(current?.id) === savingId) $('#saveStatus').textContent = 'Save failed';
     } finally {
       if (savePromise === request) savePromise = null;
     }
@@ -1290,6 +1395,13 @@
       pre.dataset.hl = source;
       return;
     }
+    // highlightAuto tries every configured grammar. Very large pasted blocks
+    // can monopolize the UI thread for seconds, so leave those as readable
+    // plain text instead of making note navigation janky.
+    if (source.length > 10000) {
+      pre.dataset.hl = source;
+      return;
+    }
     const offset = preserveCaret ? caretOffsetInPre(pre) : null;
     pre.innerHTML = hljs.highlightAuto(source, HL_LANGS).value;
     pre.dataset.hl = source;
@@ -1302,6 +1414,23 @@
       if (!caretInsideNode(pre)) highlightPre(pre, false);
     });
   }
+
+  let highlightGeneration = 0;
+  function scheduleHighlightCode() {
+    const generation = ++highlightGeneration;
+    const blocks = $$('pre', editor);
+    let index = 0;
+    const next = () => {
+      if (generation !== highlightGeneration || index >= blocks.length) return;
+      const pre = blocks[index++];
+      if (!caretInsideNode(pre)) highlightPre(pre, false);
+      setTimeout(next, 0);
+    };
+    // Paint the selected note first; highlighting is progressive enhancement.
+    (window.requestIdleCallback || function (fn) { setTimeout(fn, 16); })(next, { timeout: 250 });
+  }
+
+  window.addEventListener('memoir:highlight-ready', scheduleHighlightCode);
 
   function caretPre() {
     const sel = getSelection();

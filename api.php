@@ -9,6 +9,11 @@ if ($method !== 'GET') {
     verify_csrf();
 }
 
+// PHP's default file-backed sessions hold an exclusive lock until request
+// shutdown. The API is session-read-only after authentication, so release the
+// lock now and allow fast clicks/autosaves to run concurrently.
+if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+
 if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 10 * 1024 * 1024) {
     json_response(['ok' => false, 'message' => 'Request is too large'], 413);
 }
