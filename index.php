@@ -167,6 +167,9 @@ function note_preview(string $content): string {
                 <span id="listCount"><?= count($notes) ?> notes</span>
             </div>
             <div class="list-head-actions">
+                <button id="sortBtn" class="icon-btn" type="button" title="Sort notes">
+                    <i class="fa-solid fa-arrow-down-wide-short"></i>
+                </button>
                 <button id="selectModeBtn" class="icon-btn" type="button" title="Select notes">
                     <i class="fa-solid fa-check-double"></i>
                 </button>
@@ -325,6 +328,11 @@ function note_preview(string $content): string {
                 </div>
 
                 <div id="noteContent" class="rich-editor" contenteditable="true" spellcheck="true"></div>
+
+                <div class="backlinks hidden" id="backlinks">
+                    <span class="backlinks-label"><i class="fa-solid fa-arrow-turn-up"></i> Linked from</span>
+                    <div class="backlink-list" id="backlinkList"></div>
+                </div>
             </div>
 
             <footer class="editor-foot">
@@ -356,6 +364,28 @@ function note_preview(string $content): string {
         </div>
     </main>
 
+</div>
+
+<!-- Quick switcher (Ctrl+P) -->
+<div class="palette-backdrop hidden" id="palette">
+    <div class="palette" role="dialog" aria-label="Jump to note">
+        <div class="palette-head">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="paletteInput" placeholder="Jump to a note…" autocomplete="off" spellcheck="false">
+            <kbd>Esc</kbd>
+        </div>
+        <div class="palette-results" id="paletteResults"></div>
+    </div>
+</div>
+
+<!-- Popover: wiki-link suggestions while typing [[ -->
+<div class="mini-menu hidden" id="wikiMenu" role="menu"></div>
+
+<!-- Popover: sort options -->
+<div class="mini-menu hidden" id="sortMenu" role="menu">
+    <button type="button" data-sort="updated"><i class="fa-regular fa-clock"></i> Last updated</button>
+    <button type="button" data-sort="created"><i class="fa-regular fa-calendar-plus"></i> Date created</button>
+    <button type="button" data-sort="title"><i class="fa-solid fa-arrow-down-a-z"></i> Title A–Z</button>
 </div>
 
 <!-- Popover: folder options (rename / reorder / delete) -->

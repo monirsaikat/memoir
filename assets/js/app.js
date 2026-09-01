@@ -25,6 +25,11 @@
   let saveTimer = null;      // debounce timer for autosave
   let draftStyle = { icon: 'fa-note-sticky', color: '#6F5EE8' };
   let currentTags = [];      // tags of the open note
+  let sortMode = 'updated';  // note list order: updated | created | title
+  try {
+    const stored = localStorage.getItem('memoir-sort');
+    if (['updated', 'created', 'title'].includes(stored)) sortMode = stored;
+  } catch {}
 
   async function api(action, opts = {}) {
     const headers = opts.headers || {};
@@ -93,6 +98,12 @@
     updateWords();
     highlightCode();
 
+    const backlinks = d.backlinks || [];
+    $('#backlinks').classList.toggle('hidden', !backlinks.length);
+    $('#backlinkList').innerHTML = backlinks.map(b =>
+      `<button type="button" data-id="${b.id}">${escapeHtml(b.title || 'Untitled note')}</button>`
+    ).join('');
+
     $$('.note-card').forEach(card => card.classList.toggle('active', card.dataset.id == id));
 
     if (window.matchMedia('(max-width: 760px)').matches) {
@@ -124,10 +135,30 @@
     if (filterTag !== '') query += `&tag=${encodeURIComponent(filterTag)}`;
     if (pinnedOnly) query += '&pinned=1';
     if (trashView) query += '&trash=1';
+    if (sortMode !== 'updated') query += `&sort=${sortMode}`;
 
     const d = await api('search', { query });
     renderNotes(d.notes);
     syncUrl();
+  }
+
+  const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Escape text for HTML while wrapping search-term matches in <mark>.
+  function markMatches(text, q) {
+    const tokens = (q || '').split(/\s+/).filter(Boolean).map(escapeRegExp);
+    if (!tokens.length) return escapeHtml(text);
+    const parts = text.split(new RegExp(`(${tokens.join('|')})`, 'ig'));
+    return parts.map((part, i) => i % 2 ? `<mark>${escapeHtml(part)}</mark>` : escapeHtml(part)).join('');
+  }
+
+  // Preview snippet centered on the first search match instead of the start.
+  function previewSnippet(content, q) {
+    const text = stripHtml(content);
+    if (!q) return { text: text.slice(0, 115), leading: false };
+    const idx = text.toLowerCase().indexOf(q.split(/\s+/)[0]?.toLowerCase() || '');
+    if (idx <= 40) return { text: text.slice(0, 115), leading: false };
+    return { text: text.slice(idx - 30, idx + 85), leading: true };
   }
 
   function renderNotes(notes) {
@@ -138,10 +169,14 @@
       return;
     }
 
-    $('#noteList').innerHTML = notes.map(n => `<button class="note-card ${current && current.id == n.id ? 'active' : ''}${typeof selectedIds !== 'undefined' && selectedIds.has(String(n.id)) ? ' selected' : ''}" data-id="${n.id}" data-folder="${n.folder_id ?? ''}" data-pinned="${n.is_pinned}">
+    const q = searchInput.value.trim();
+    $('#noteList').innerHTML = notes.map(n => {
+      const snip = previewSnippet(n.content, q);
+      return `<button class="note-card ${current && current.id == n.id ? 'active' : ''}${typeof selectedIds !== 'undefined' && selectedIds.has(String(n.id)) ? ' selected' : ''}" data-id="${n.id}" data-folder="${n.folder_id ?? ''}" data-pinned="${n.is_pinned}">
     <div class="note-card-top"><i class="fa-solid ${escapeHtml(n.icon)}" style="color:${escapeHtml(!n.color || n.color.toUpperCase() === '#FFFFFF' ? '#6F5EE8' : n.color)}"></i>${n.is_pinned == 1 ? '<i class="fa-solid fa-thumbtack pin-mini"></i>' : ''}</div>
-    <strong>${escapeHtml(n.title)}</strong><p>${escapeHtml(stripHtml(n.content).slice(0, 115))}</p>
-    <div class="note-meta"><span>${escapeHtml(n.folder_name || 'Unfiled')}${n.tags ? ' · #' + escapeHtml(n.tags).split(',').join(' #') : ''}</span><time>${fmtDate(n.updated_at)}</time></div></button>`).join('');
+    <strong>${markMatches(n.title, q)}</strong><p>${snip.leading ? '…' : ''}${markMatches(snip.text, q)}</p>
+    <div class="note-meta"><span>${escapeHtml(n.folder_name || 'Unfiled')}${n.tags ? ' · #' + escapeHtml(n.tags).split(',').join(' #') : ''}</span><time>${fmtDate(n.updated_at)}</time></div></button>`;
+    }).join('');
   }
 
   function queueSave() {
@@ -279,6 +314,7 @@
   $('#noteTitle').addEventListener('input', queueSave);
   $('#noteContent').addEventListener('input', () => {
     handleInlineShortcut();
+    updateWikiMenu();
     queueSave();
     updateWords();
   });
@@ -463,6 +499,10 @@
       e.preventDefault();
       $('#newNote').click();
     }
+    if (mod && key === 'p') {
+      e.preventDefault();
+      openPalette();
+    }
     if (mod && key === 's') {
       e.preventDefault();
       clearTimeout(saveTimer);
@@ -472,6 +512,8 @@
       $$('.modal-backdrop:not(.hidden)').forEach(closeModal);
       if (selectMode) setSelectMode(false);
       closeMiniMenus();
+      closePalette();
+      closeWikiMenu();
     }
   });
 
@@ -1191,6 +1233,28 @@
   });
 
   editor.addEventListener('keydown', e => {
+    // While the [[ suggestion menu is open it owns the navigation keys.
+    if (!wikiMenu.classList.contains('hidden')) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (wikiMatches.length) {
+          wikiIndex = (wikiIndex + (e.key === 'ArrowDown' ? 1 : -1) + wikiMatches.length) % wikiMatches.length;
+          $$('#wikiMenu button').forEach((btn, i) => btn.classList.toggle('checked', i === wikiIndex));
+        }
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const pick = wikiMatches[wikiIndex];
+        pick ? insertWikiLink(pick) : closeWikiMenu();
+        return;
+      }
+      if (e.key === 'Escape') {
+        closeWikiMenu();
+        return;
+      }
+    }
+
     if (e.key === ' ') handleBlockShortcut(e);
     if (e.key === 'Enter') handleEnterShortcut(e);
 
@@ -1402,6 +1466,8 @@
   function closeMiniMenus() {
     folderMenu.classList.add('hidden');
     folderPicker.classList.add('hidden');
+    $('#sortMenu').classList.add('hidden');
+    $('#wikiMenu').classList.add('hidden');
   }
 
   function openMiniMenu(menu, anchor) {
@@ -1494,8 +1560,221 @@
   });
 
   document.addEventListener('pointerdown', e => {
-    if (e.target.closest('#folderMenu, #folderPicker, .folder-menu-btn, #crumbFolder')) return;
+    if (e.target.closest('#folderMenu, #folderPicker, .folder-menu-btn, #crumbFolder, #sortMenu, #sortBtn')) return;
     closeMiniMenus();
+  });
+
+  // ---------------------------------------------------------------------
+  // Sort options
+  // ---------------------------------------------------------------------
+
+  const sortMenu = $('#sortMenu');
+
+  function syncSortMenu() {
+    $$('#sortMenu button').forEach(btn =>
+      btn.classList.toggle('checked', btn.dataset.sort === sortMode));
+  }
+
+  $('#sortBtn').onclick = e => {
+    if (!sortMenu.classList.contains('hidden')) {
+      sortMenu.classList.add('hidden');
+      return;
+    }
+    syncSortMenu();
+    openMiniMenu(sortMenu, e.currentTarget);
+  };
+
+  sortMenu.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-sort]');
+    if (!btn) return;
+    sortMode = btn.dataset.sort;
+    try {
+      localStorage.setItem('memoir-sort', sortMode);
+    } catch {}
+    sortMenu.classList.add('hidden');
+    refreshList();
+  });
+
+  // ---------------------------------------------------------------------
+  // Quick switcher (Ctrl+P)
+  // ---------------------------------------------------------------------
+
+  let switcherCache = [];
+  let paletteMatches = [];
+  let paletteIndex = 0;
+
+  function renderPalette(q) {
+    const ql = q.trim().toLowerCase();
+    const words = ql.split(/\s+/).filter(Boolean);
+    paletteMatches = switcherCache
+      .map(n => {
+        const t = (n.title || 'untitled note').toLowerCase();
+        let score = -1;
+        if (!words.length) score = 0;
+        else if (t.startsWith(ql)) score = 3;
+        else if (t.includes(ql)) score = 2;
+        else if (words.every(w => t.includes(w))) score = 1;
+        return { n, score };
+      })
+      .filter(x => x.score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12)
+      .map(x => x.n);
+    paletteIndex = 0;
+    $('#paletteResults').innerHTML = paletteMatches.map((n, i) =>
+      `<button type="button" data-id="${n.id}" class="${i === 0 ? 'active' : ''}">
+        <span class="pal-title">${markMatches(n.title || 'Untitled note', q)}</span>
+        <span class="pal-meta">${escapeHtml(n.folder_name || 'Unfiled')}</span>
+      </button>`
+    ).join('') || '<div class="pal-empty">No matching notes</div>';
+  }
+
+  function movePaletteIndex(delta) {
+    if (!paletteMatches.length) return;
+    paletteIndex = (paletteIndex + delta + paletteMatches.length) % paletteMatches.length;
+    $$('#paletteResults button').forEach((btn, i) => {
+      btn.classList.toggle('active', i === paletteIndex);
+      if (i === paletteIndex) btn.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  async function openPalette() {
+    $('#palette').classList.remove('hidden');
+    $('#paletteInput').value = '';
+    try {
+      switcherCache = (await api('switcher')).notes;
+    } catch {
+      switcherCache = [];
+    }
+    renderPalette('');
+    $('#paletteInput').focus();
+  }
+
+  function closePalette() {
+    $('#palette').classList.add('hidden');
+  }
+
+  $('#paletteInput').addEventListener('input', e => renderPalette(e.target.value));
+  $('#paletteInput').addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); movePaletteIndex(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); movePaletteIndex(-1); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      const pick = paletteMatches[paletteIndex];
+      if (pick) { closePalette(); loadNote(pick.id); }
+    } else if (e.key === 'Escape') {
+      closePalette();
+    }
+  });
+  $('#paletteResults').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-id]');
+    if (!btn) return;
+    closePalette();
+    loadNote(btn.dataset.id);
+  });
+  $('#palette').addEventListener('pointerdown', e => {
+    if (e.target === e.currentTarget) closePalette();
+  });
+
+  // ---------------------------------------------------------------------
+  // Wiki links: [[ autocompletion, click-to-follow, backlinks
+  // ---------------------------------------------------------------------
+
+  const wikiMenu = $('#wikiMenu');
+  let wikiMatches = [];
+  let wikiIndex = 0;
+  let wikiCtx = null;
+
+  function wikiContext() {
+    const sel = getSelection();
+    if (!sel.rangeCount || !sel.isCollapsed) return null;
+    const node = sel.anchorNode;
+    if (node.nodeType !== Node.TEXT_NODE || !editor.contains(node)) return null;
+    if (node.parentElement.closest('pre, code, a')) return null;
+    const upto = node.textContent.slice(0, sel.anchorOffset);
+    const m = /\[\[([^\[\]\n]*)$/.exec(upto);
+    if (!m) return null;
+    return { node, start: m.index, offset: sel.anchorOffset, query: m[1] };
+  }
+
+  function closeWikiMenu() {
+    wikiMenu.classList.add('hidden');
+    wikiCtx = null;
+  }
+
+  function renderWikiMenu() {
+    const ql = wikiCtx.query.trim().toLowerCase();
+    wikiMatches = switcherCache
+      .filter(n => String(n.id) !== String(current?.id))
+      .filter(n => !ql || (n.title || 'untitled note').toLowerCase().includes(ql))
+      .slice(0, 8);
+    wikiIndex = 0;
+    wikiMenu.innerHTML = wikiMatches.map((n, i) =>
+      `<button type="button" data-id="${n.id}" class="${i === 0 ? 'checked' : ''}"><i class="fa-regular fa-note-sticky"></i> ${escapeHtml(n.title || 'Untitled note')}</button>`
+    ).join('') || '<div class="wiki-empty">No matching notes</div>';
+  }
+
+  async function updateWikiMenu() {
+    wikiCtx = wikiContext();
+    if (!wikiCtx) return closeWikiMenu();
+    if (!switcherCache.length) {
+      try {
+        switcherCache = (await api('switcher')).notes;
+      } catch {}
+      // The caret may have moved while fetching.
+      wikiCtx = wikiContext();
+      if (!wikiCtx) return closeWikiMenu();
+    }
+    renderWikiMenu();
+    const sel = getSelection();
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    wikiMenu.classList.remove('hidden');
+    const top = Math.min(rect.bottom + 6, innerHeight - wikiMenu.offsetHeight - 10);
+    const left = Math.min(Math.max(rect.left, 10), innerWidth - wikiMenu.offsetWidth - 10);
+    wikiMenu.style.top = `${top}px`;
+    wikiMenu.style.left = `${left}px`;
+  }
+
+  function insertWikiLink(noteRef) {
+    if (!wikiCtx) return;
+    const range = document.createRange();
+    range.setStart(wikiCtx.node, wikiCtx.start);
+    range.setEnd(wikiCtx.node, wikiCtx.offset);
+    range.deleteContents();
+    const link = document.createElement('a');
+    link.dataset.noteLink = noteRef.id;
+    link.textContent = noteRef.title || 'Untitled note';
+    range.insertNode(link);
+    const tail = document.createTextNode(' ');
+    link.after(tail);
+    const caret = document.createRange();
+    caret.setStart(tail, 1);
+    caret.collapse(true);
+    const sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(caret);
+    closeWikiMenu();
+    queueSave();
+  }
+
+  wikiMenu.addEventListener('mousedown', e => e.preventDefault());
+  wikiMenu.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-id]');
+    if (!btn) return;
+    insertWikiLink(switcherCache.find(n => String(n.id) === btn.dataset.id) || { id: btn.dataset.id, title: btn.textContent.trim() });
+  });
+
+  // Clicking a wiki link follows it.
+  editor.addEventListener('click', e => {
+    const link = e.target.closest('a[data-note-link]');
+    if (!link) return;
+    e.preventDefault();
+    loadNote(link.dataset.noteLink);
+  });
+
+  $('#backlinkList').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-id]');
+    if (btn) loadNote(btn.dataset.id);
   });
 
   // Note appearance modal

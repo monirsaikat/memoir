@@ -3,6 +3,22 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-09-01
+
+### Added
+
+- Quick switcher: Ctrl+P opens a command palette that jumps to any note by
+  title, with type-ahead filtering, keyboard navigation, and match
+  highlighting.
+- Wiki-style note links: type `[[` in the editor to link to another note
+  from an inline suggestion menu; links are click-to-follow, survive the
+  sanitizer, and every note shows a "Linked from" backlinks strip.
+- Sort options for the note list — last updated, date created, or title
+  A–Z — remembered per browser, with pinned notes always on top.
+- Full-text search: a MySQL FULLTEXT index over titles, content, and tags
+  with per-word prefix matching (and a LIKE fallback for short words), plus
+  highlighted matches and match-centered previews in the note list.
+
 ## [1.4.0] - 2026-09-01
 
 ### Added
@@ -145,6 +161,7 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
+[1.5.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.5.0
 [1.4.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.4.0
 [1.3.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.3.0
 [1.2.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.2.0

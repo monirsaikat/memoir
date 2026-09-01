@@ -59,7 +59,28 @@ case 'note':
     if (!$note) {
         json_response(['ok' => false, 'message' => 'Note not found'], 404);
     }
-    json_response(['ok' => true, 'note' => $note]);
+
+    // Notes whose content links here with a wiki link.
+    $stmt = db()->prepare(
+        "SELECT id, title FROM notes
+         WHERE deleted_at IS NULL AND id != ? AND content LIKE ?
+         ORDER BY updated_at DESC LIMIT 20"
+    );
+    $stmt->execute([$id, '%data-note-link="' . $id . '"%']);
+
+    json_response(['ok' => true, 'note' => $note, 'backlinks' => $stmt->fetchAll()]);
+
+case 'switcher':
+    require_method('GET');
+    $rows = db()->query(
+        "SELECT n.id, n.title, f.name folder_name
+         FROM notes n
+         LEFT JOIN folders f ON f.id = n.folder_id
+         WHERE n.deleted_at IS NULL
+         ORDER BY n.updated_at DESC
+         LIMIT 500"
+    )->fetchAll();
+    json_response(['ok' => true, 'notes' => $rows]);
 
 case 'create-note':
     require_method('POST');
@@ -212,10 +233,24 @@ case 'search':
     $params = [];
 
     if ($q !== '') {
-        $sql .= " AND (n.title LIKE ? OR n.content LIKE ? OR n.tags LIKE ?)";
-        $params[] = "%$q%";
-        $params[] = "%$q%";
-        $params[] = "%$q%";
+        // Prefix-match every word through the FULLTEXT index, with LIKE as a
+        // safety net for titles/tags and words shorter than the index minimum.
+        $words = array_values(array_filter(array_map(
+            static fn (string $w): string => preg_replace('/[^\p{L}\p{N}]+/u', '', $w),
+            preg_split('/\s+/', $q)
+        )));
+        if ($words) {
+            $boolean = implode(' ', array_map(static fn (string $w): string => '+' . $w . '*', $words));
+            $sql .= " AND (MATCH(n.title, n.content, n.tags) AGAINST(? IN BOOLEAN MODE) OR n.title LIKE ? OR n.tags LIKE ?)";
+            $params[] = $boolean;
+            $params[] = "%$q%";
+            $params[] = "%$q%";
+        } else {
+            $sql .= " AND (n.title LIKE ? OR n.content LIKE ? OR n.tags LIKE ?)";
+            $params[] = "%$q%";
+            $params[] = "%$q%";
+            $params[] = "%$q%";
+        }
     }
     if ($folder !== '') {
         $sql .= " AND n.folder_id = ?";
@@ -228,7 +263,14 @@ case 'search':
         $sql .= " AND FIND_IN_SET(?, n.tags)";
         $params[] = $tag;
     }
-    $sql .= " ORDER BY n.is_pinned DESC, n.updated_at DESC LIMIT 100";
+
+    $orders = [
+        'updated' => 'n.updated_at DESC',
+        'created' => 'n.created_at DESC',
+        'title' => 'n.title ASC',
+    ];
+    $sort = $orders[$_GET['sort'] ?? 'updated'] ?? $orders['updated'];
+    $sql .= " ORDER BY n.is_pinned DESC, $sort LIMIT 100";
 
     $stmt = db()->prepare($sql);
     $stmt->execute($params);

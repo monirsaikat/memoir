@@ -108,6 +108,9 @@ function ensure_schema(): void {
         if (!db()->query("SHOW COLUMNS FROM notes LIKE 'deleted_at'")->fetch()) {
             db()->exec("ALTER TABLE notes ADD COLUMN deleted_at DATETIME NULL, ADD INDEX(deleted_at)");
         }
+        if (!db()->query("SHOW INDEX FROM notes WHERE Key_name = 'ft_search'")->fetch()) {
+            db()->exec("ALTER TABLE notes ADD FULLTEXT ft_search (title, content, tags)");
+        }
         // Trashed notes are purged for good after 30 days.
         db()->exec("DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)");
     } catch (Throwable) {
@@ -229,6 +232,9 @@ function sanitize_note_html(string $html): string {
                     $kept['rel'] = 'noopener noreferrer';
                     if (preg_match('#^https?://#i', $href)) $kept['target'] = '_blank';
                 }
+                // Internal wiki-style links to other notes.
+                $noteLink = $child->getAttribute('data-note-link');
+                if (ctype_digit($noteLink)) $kept['data-note-link'] = $noteLink;
             } elseif ($tag === 'img') {
                 $src = trim($child->getAttribute('src'));
                 if (preg_match('#^(https?://|/|uploads/)#i', $src)) $kept['src'] = $src;

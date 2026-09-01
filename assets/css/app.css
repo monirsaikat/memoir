@@ -2206,3 +2206,164 @@ html[data-theme="sepia"] .mini-menu { background: #faf4e4; border-color: #d7c9a7
 .editor-view.read-only .tag-row,
 .editor-view.read-only .editor-actions { display: none; }
 .editor-view.read-only .rich-editor { opacity: .85; }
+
+/* ==========================================================================
+   Tier 3: quick switcher, wiki links, sort, search highlighting
+   ========================================================================== */
+
+/* Quick switcher palette */
+.palette-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: rgba(28, 28, 24, .32);
+    backdrop-filter: blur(2px);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 12vh 18px 18px;
+}
+.palette {
+    width: min(100%, 520px);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(15, 14, 10, .3);
+    overflow: hidden;
+    animation: modal-pop .16s ease;
+}
+.palette-head {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+}
+.palette-head i { color: var(--muted); }
+.palette-head input {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-size: 15px;
+    color: var(--ink);
+}
+.palette-head kbd {
+    font-family: inherit;
+    font-size: 10px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 2px 6px;
+}
+.palette-results {
+    max-height: 320px;
+    overflow: auto;
+    padding: 6px;
+}
+.palette-results button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    border-radius: 9px;
+    padding: 9px 11px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left;
+    transition: background .1s ease;
+}
+.palette-results button:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.palette-results button.active {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.pal-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pal-meta {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--muted);
+}
+.pal-empty {
+    padding: 18px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* Search match highlighting */
+.note-card mark,
+.pal-title mark {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 1px;
+}
+
+/* Wiki links inside notes */
+.rich-editor a[data-note-link] {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px dashed color-mix(in srgb, var(--accent) 50%, transparent);
+    cursor: pointer;
+    padding-bottom: 1px;
+}
+.rich-editor a[data-note-link]:hover {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    border-radius: 4px;
+}
+
+/* Wiki suggestion menu highlights */
+#wikiMenu .wiki-empty {
+    padding: 10px 12px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+/* Backlinks strip under the editor */
+.backlinks {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 0 12px;
+    border-top: 1px solid var(--line);
+}
+.backlinks-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.backlink-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.backlink-list button {
+    border: 1px solid var(--line);
+    background: transparent;
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 12px;
+    color: var(--ink);
+    transition: background .12s ease, border-color .12s ease;
+}
+.backlink-list button:hover {
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+    color: var(--accent);
+}
