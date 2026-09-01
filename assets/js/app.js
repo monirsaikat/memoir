@@ -74,7 +74,7 @@
   // Note loading, list rendering, autosave
   // ---------------------------------------------------------------------
 
-  async function loadNote(id) {
+  async function loadNote(id, push = true) {
     const d = await api('note', { query: `&id=${id}` });
     current = d.note;
     draftStyle = { icon: current.icon || 'fa-note-sticky', color: current.color || '#6F5EE8' };
@@ -95,6 +95,14 @@
     if (window.matchMedia('(max-width: 760px)').matches) {
       document.body.classList.add('editor-open');
     }
+    syncUrl(push);
+  }
+
+  function closeEditor() {
+    current = null;
+    $('#editorView').classList.add('hidden');
+    $('#emptyState').classList.remove('hidden');
+    document.body.classList.remove('editor-open');
   }
 
   async function refreshList() {
@@ -106,6 +114,7 @@
 
     const d = await api('search', { query });
     renderNotes(d.notes);
+    syncUrl();
   }
 
   function renderNotes(notes) {
@@ -117,7 +126,7 @@
     }
 
     $('#noteList').innerHTML = notes.map(n => `<button class="note-card ${current && current.id == n.id ? 'active' : ''}" data-id="${n.id}" data-folder="${n.folder_id ?? ''}" data-pinned="${n.is_pinned}">
-    <div class="note-card-top"><i class="fa-solid ${escapeHtml(n.icon)}" style="color:${escapeHtml(n.color || '#6F5EE8')}"></i>${n.is_pinned == 1 ? '<i class="fa-solid fa-thumbtack pin-mini"></i>' : ''}</div>
+    <div class="note-card-top"><i class="fa-solid ${escapeHtml(n.icon)}" style="color:${escapeHtml(!n.color || n.color.toUpperCase() === '#FFFFFF' ? '#6F5EE8' : n.color)}"></i>${n.is_pinned == 1 ? '<i class="fa-solid fa-thumbtack pin-mini"></i>' : ''}</div>
     <strong>${escapeHtml(n.title)}</strong><p>${escapeHtml(stripHtml(n.content).slice(0, 115))}</p>
     <div class="note-meta"><span>${escapeHtml(n.folder_name || 'Unfiled')}${n.tags ? ' · #' + escapeHtml(n.tags).split(',').join(' #') : ''}</span><time>${fmtDate(n.updated_at)}</time></div></button>`).join('');
   }
@@ -188,10 +197,7 @@
   $('#deleteNote').onclick = async () => {
     if (!current || !confirm('Delete this note permanently?')) return;
     await api('delete-note', { method: 'POST', body: JSON.stringify({ id: current.id }) });
-    current = null;
-    $('#editorView').classList.add('hidden');
-    $('#emptyState').classList.remove('hidden');
-    document.body.classList.remove('editor-open');
+    closeEditor();
     await refreshList();
   };
 
@@ -215,6 +221,7 @@
     btn.classList.add('active');
     $('#listTitle').textContent = pinnedOnly ? 'Pinned' : 'All notes';
     closeSidebar();
+    syncUrl(true);
     refreshList();
   });
 
@@ -228,6 +235,7 @@
     btn.classList.add('active');
     $('#listTitle').textContent = btn.querySelector('span').textContent;
     closeSidebar();
+    syncUrl(true);
     refreshList();
   });
 
@@ -296,6 +304,7 @@
     btn.classList.add('active');
     $('#listTitle').textContent = `#${filterTag}`;
     closeSidebar();
+    syncUrl(true);
     refreshList();
   });
 
@@ -817,5 +826,69 @@
     closeModal($('#settingsModal'));
     location.reload();
   };
+
+  // ---------------------------------------------------------------------
+  // URL state: the current view lives in query params, so a reload (or a
+  // bookmarked/shared link) restores the same note, filter, and search.
+  // ---------------------------------------------------------------------
+
+  // Write the current view into the query string. push=true adds a history
+  // entry (a navigation the back button can return to); otherwise the URL is
+  // replaced in place (typing in search, autosave refreshes, boot).
+  function syncUrl(push = false) {
+    const params = new URLSearchParams();
+    if (current) params.set('note', current.id);
+    if (filterTag !== '') params.set('tag', filterTag);
+    else if (filterFolder !== '') params.set('folder', filterFolder);
+    if (pinnedOnly) params.set('pinned', '1');
+    const q = searchInput.value.trim();
+    if (q) params.set('q', q);
+
+    const qs = params.toString();
+    const newSearch = qs ? `?${qs}` : '';
+    if (newSearch === location.search) return;
+    const target = newSearch || location.pathname;
+    if (push) history.pushState(null, '', target);
+    else history.replaceState(null, '', target);
+  }
+
+  // Apply whatever the URL says: filters, search, and the open note.
+  // Used on boot (reload / bookmarked link) and on back/forward navigation.
+  function applyUrlState() {
+    const params = new URLSearchParams(location.search);
+    searchInput.value = params.get('q') || '';
+    filterFolder = params.get('folder') || '';
+    filterTag = params.get('tag') || '';
+    pinnedOnly = params.get('pinned') === '1';
+
+    clearFilterHighlights();
+    if (filterTag) {
+      $(`.tag-item[data-tag="${CSS.escape(filterTag)}"]`)?.classList.add('active');
+      $('#listTitle').textContent = `#${filterTag}`;
+    } else if (filterFolder) {
+      const btn = $(`.folder-item[data-folder="${CSS.escape(filterFolder)}"]`);
+      btn?.classList.add('active');
+      $('#listTitle').textContent = btn ? btn.querySelector('span').textContent : 'All notes';
+    } else if (pinnedOnly) {
+      $('.nav-item[data-pinned="1"]')?.classList.add('active');
+      $('#listTitle').textContent = 'Pinned';
+    } else {
+      $('.nav-item[data-folder=""]')?.classList.add('active');
+      $('#listTitle').textContent = 'All notes';
+    }
+
+    refreshList();
+
+    const noteId = parseInt(params.get('note') || '', 10);
+    if (noteId && (!current || current.id != noteId)) {
+      // The note may have been deleted since the URL was made; just drop it.
+      loadNote(noteId, false).catch(() => syncUrl());
+    } else if (!noteId && current) {
+      closeEditor();
+    }
+  }
+
+  window.addEventListener('popstate', applyUrlState);
+  if (location.search) applyUrlState();
 
 })();

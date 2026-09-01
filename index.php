@@ -380,32 +380,32 @@ function note_preview(string $content): string {
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir <?= e(MEMOIR_VERSION) ?></span>
-                <h3 id="whatsNewTitle">Fresh start, safer foundation</h3>
+                <h3 id="whatsNewTitle">A premium editor, tags, and links that remember</h3>
             </div>
         </div>
 
-        <p class="release-copy">This release makes Memoir ready for simple ZIP-to-cPanel installation and public open-source use.</p>
+        <p class="release-copy">This release turns the editor into a first-class writing tool and makes every view shareable and reload-proof.</p>
 
         <ul class="release-list">
             <li>
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
                 <div>
-                    <strong>A cleaner installer</strong>
-                    <span>Guided setup, server checks, safer validation, and useful cPanel defaults.</span>
+                    <strong>Markdown, colors, and a format bubble</strong>
+                    <span>Type # for headings, - for lists or **bold** as you write, pick text and highlight colors, and format selections from a floating bubble.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-shield-halved"></i>
+                <i class="fa-solid fa-tag"></i>
                 <div>
-                    <strong>Security hardening</strong>
-                    <span>Protected runtime files, sanitized note HTML, safer sessions, and POST-only sign out.</span>
+                    <strong>Tags</strong>
+                    <span>Tag notes with chips in the editor, filter from the sidebar tag cloud, and find tags through search.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-bookmark"></i>
+                <i class="fa-solid fa-link"></i>
                 <div>
-                    <strong>A real Memoir identity</strong>
-                    <span>A new memory-page logo and favicon across the product.</span>
+                    <strong>Views that survive reloads</strong>
+                    <span>The open note, filters, and search live in the URL — reload, bookmark, or use back/forward and land right where you were.</span>
                 </div>
             </li>
         </ul>
