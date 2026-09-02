@@ -2252,6 +2252,99 @@ html[data-theme="paper"] .auth-page { background: radial-gradient(circle at 50% 
 html[data-theme="paper"] .auth-card { background: #fcf8ec; border-color: #d1c5ac; }
 html[data-theme="paper"] .auth-card input { background: #fffdf5; border-color: #d8cfbb; }
 
+/* Nord: arctic north-bluish palette (dark base) */
+html[data-theme="nord"] {
+    --bg: #1a212e;
+    --panel: #243347;
+    --panel2: #2e3f56;
+    --ink: #e4eaf0;
+    --muted: #8f9baa;
+    --line: #3d5070;
+}
+html[data-theme="nord"] .sidebar { background: #1f2a39; border-right-color: #354356; }
+html[data-theme="nord"] .sidebar-bottom { border-top-color: #354356; }
+html[data-theme="nord"] .note-list-panel { background: #1f2a39; }
+html[data-theme="nord"] .search-wrap input { background: #2e3f56; border-color: #3d5070; }
+html[data-theme="nord"] .search-wrap kbd { background: #374a62; border-color: #4b6280; color: #7d8fa1; }
+html[data-theme="nord"] .note-card { background: #2a3a50; border-color: #384960; }
+html[data-theme="nord"] .note-card:hover,
+html[data-theme="nord"] .note-card.active { background: #324659; border-color: #4a6477; }
+html[data-theme="nord"] .editor-head,
+html[data-theme="nord"] .toolbar,
+html[data-theme="nord"] .editor-foot { border-color: #354356; }
+html[data-theme="nord"] .icon-btn { background: #2e3f56; border-color: #3d5070; }
+html[data-theme="nord"] .icon-btn:hover { background: #374a62; }
+html[data-theme="nord"] .rich-editor pre { background: #1f2a39; border-color: #3d5070; }
+html[data-theme="nord"] .rich-editor code { background: #374a62; }
+html[data-theme="nord"] .rich-editor table,
+html[data-theme="nord"] .rich-editor th,
+html[data-theme="nord"] .rich-editor td { border-color: #3d5070; }
+html[data-theme="nord"] .rich-editor th { background: #2e3f56; }
+html[data-theme="nord"] .rich-editor ul.checklist li:before { background: #243347; border-color: #5a7a9f; }
+html[data-theme="nord"] .modal,
+html[data-theme="nord"] .color-sheet,
+html[data-theme="nord"] .heading-sheet { background: #2e3f56; border-color: #4b6280; }
+html[data-theme="nord"] .modal input,
+html[data-theme="nord"] .modal select { background: #1f2a39; border-color: #3d5070; }
+html[data-theme="nord"] .modal-actions button { background: #374a62; border-color: #4b6280; }
+html[data-theme="nord"] .icon-grid button { background: #1f2a39; border-color: #3d5070; }
+html[data-theme="nord"] .swatch-clear { background: #374a62; border-color: #4b6280; color: #8f9baa; }
+html[data-theme="nord"] .settings-nav { background: #1f2a39; }
+html[data-theme="nord"] .format-bubble,
+html[data-theme="nord"] .table-menu { background: #465d7d; }
+html[data-theme="nord"] .rich-editor,
+html[data-theme="nord"] .note-list { scrollbar-color: #4a6477 transparent; }
+html[data-theme="nord"] .rich-editor::-webkit-scrollbar-thumb,
+html[data-theme="nord"] .note-list::-webkit-scrollbar-thumb { background: #4a6477; }
+html[data-theme="nord"] .auth-page { background: radial-gradient(circle at 50% -10%, #2e3f56 0, transparent 36rem), var(--bg); }
+html[data-theme="nord"] .auth-card { background: #1f2a39; border-color: #3d5070; }
+html[data-theme="nord"] .auth-card input { background: #1a212e; border-color: #3d5070; }
+
+/* Soft: gentle pastel light theme (light base) */
+html[data-theme="soft"] {
+    --bg: #f9f7f3;
+    --panel: #fff;
+    --panel2: #faf8f4;
+    --ink: #3a3a38;
+    --muted: #9a9a95;
+    --line: #e8e5dd;
+}
+html[data-theme="soft"] .sidebar { background: #f3f1ec; border-right-color: #dfdcd3; }
+html[data-theme="soft"] .sidebar-bottom { border-top-color: #dfdcd3; }
+html[data-theme="soft"] .primary-btn { background: #3a3a38 !important; }
+html[data-theme="soft"] .note-list-panel { background: #faf8f4; }
+html[data-theme="soft"] .search-wrap input { background: #fff; }
+html[data-theme="soft"] .search-wrap kbd { background: #f3f1ec; border-color: #e8e5dd; }
+html[data-theme="soft"] .note-card { background: rgba(255, 253, 250, .8); border-color: #ddd9d0; }
+html[data-theme="soft"] .note-card:hover,
+html[data-theme="soft"] .note-card.active { background: #fffaf5; border-color: #d4cfc2; }
+html[data-theme="soft"] .editor-panel { background: #fff; }
+html[data-theme="soft"] .editor-head,
+html[data-theme="soft"] .toolbar,
+html[data-theme="soft"] .editor-foot { border-color: #e8e5dd; }
+html[data-theme="soft"] .icon-btn { background: #fff; }
+html[data-theme="soft"] .icon-btn:hover { background: #faf8f4; }
+html[data-theme="soft"] .toolbar button:hover { background: #f5f2eb; }
+html[data-theme="soft"] .rich-editor pre { background: #f5f2eb; border-color: #e8e5dd; }
+html[data-theme="soft"] .rich-editor code { background: #efe8dd; }
+html[data-theme="soft"] .rich-editor img { border-color: #e8e5dd; }
+html[data-theme="soft"] .modal,
+html[data-theme="soft"] .color-sheet,
+html[data-theme="soft"] .heading-sheet { background: #fff; border-color: #dfdcd3; }
+html[data-theme="soft"] .modal input,
+html[data-theme="soft"] .modal select { background: #fffbf7; }
+html[data-theme="soft"] .modal-actions button { background: #faf8f4; border-color: #e8e5dd; }
+html[data-theme="soft"] .icon-grid button { background: #fffbf7; }
+html[data-theme="soft"] .swatch-clear { background: #faf8f4; border-color: #e8e5dd; }
+html[data-theme="soft"] .rich-editor,
+html[data-theme="soft"] .note-list { scrollbar-color: #d4cfc2 transparent; }
+html[data-theme="soft"] .rich-editor::-webkit-scrollbar-thumb,
+html[data-theme="soft"] .note-list::-webkit-scrollbar-thumb { background: #d4cfc2; }
+html[data-theme="soft"] .rich-editor ul.checklist li:before { background: #fffbf7; border-color: #c5bfb4; }
+html[data-theme="soft"] .auth-page { background: radial-gradient(circle at 50% -10%, #fff 0, transparent 36rem), var(--bg); }
+html[data-theme="soft"] .auth-card { background: #fff; border-color: #dfdcd3; }
+html[data-theme="soft"] .auth-card input { background: #fffbf7; border-color: #e8e5dd; }
+
 /* Flavor preview thumbs */
 .thumb-sepia { background: #efe6d1; }
 .thumb-sepia .tt-side { background: #ddcfad; }
@@ -2274,6 +2367,12 @@ html[data-theme="paper"] .auth-card input { background: #fffdf5; border-color: #
 .thumb-paper { background: #f8f3e6; }
 .thumb-paper .tt-side { background: #e8dcc4; }
 .thumb-paper .tt-main span + span { background: #d9ccb2; width: 90%; }
+.thumb-nord { background: #243347; }
+.thumb-nord .tt-side { background: #354356; }
+.thumb-nord .tt-main span + span { background: #4a6477; width: 90%; }
+.thumb-soft { background: #faf8f4; }
+.thumb-soft .tt-side { background: #f3f1ec; }
+.thumb-soft .tt-main span + span { background: #e8e5dd; width: 90%; }
 
 /* ==========================================================================
    Bulk selection & modern accent pills

@@ -71,11 +71,11 @@ $clientNotes = array_map(static function (array $note) use (&$clientContentBudge
     (function () {
         try {
             var choice = localStorage.getItem('memoir-theme') || 'system';
-            var darkFlavors = { dark: 1, ocean: 1, midnight: 1 };
+            var darkFlavors = { dark: 1, ocean: 1, midnight: 1, forest: 1, dusk: 1, aurora: 1, nord: 1 };
             if (choice === 'system') {
                 choice = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             }
-            if (!/^(light|dark|sepia|ocean|midnight)$/.test(choice)) choice = 'light';
+            if (!/^(light|dark|sepia|ocean|midnight|forest|dusk|aurora|paper|nord|soft)$/.test(choice)) choice = 'light';
             document.documentElement.dataset.theme = choice;
             document.documentElement.dataset.mode = darkFlavors[choice] ? 'dark' : 'light';
             var accent = localStorage.getItem('memoir-accent');
