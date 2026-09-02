@@ -39,7 +39,9 @@ exports, credentials, or personal notes.
 
 - Start PHP files with `declare(strict_types=1);` when practical.
 - Use prepared statements for every value that reaches SQL.
-- Escape HTML output with `e()` and sanitize rich note HTML before storage.
+- Keep markup in Smarty templates under `templates/` (output is escaped
+  automatically; see `templates/README.md`) and sanitize rich note HTML before
+  storage.
 - Require CSRF protection for state-changing requests.
 - Keep API errors useful without revealing credentials or server internals.
 - Use existing design tokens and components before introducing new UI patterns.
@@ -51,6 +53,7 @@ At minimum, run:
 
 ```bash
 php -l bootstrap.php
+php -l app/view.php
 php -l install/index.php
 php -l login.php
 php -l index.php

@@ -4,6 +4,9 @@ declare(strict_types=1);
 define('MEMOIR_VERSION', trim((string) @file_get_contents(__DIR__ . '/VERSION')) ?: '1.0.0');
 define('MEMOIR_SCHEMA_VERSION', '2026-09-01-1');
 
+// Template rendering (Smarty, vendored under lib/smarty) and its view helpers.
+require_once __DIR__ . '/app/view.php';
+
 ini_set('session.use_strict_mode', '1');
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_set_cookie_params([
@@ -86,12 +89,6 @@ function require_auth(): array {
         exit;
     }
     return $user;
-}
-
-// Version-stamped asset URL so browsers refetch changed CSS/JS immediately.
-function asset(string $path): string {
-    $file = __DIR__ . '/' . $path;
-    return e($path . '?v=' . (is_file($file) ? filemtime($file) : MEMOIR_VERSION));
 }
 
 // Lightweight in-place migrations for installs created before newer features.

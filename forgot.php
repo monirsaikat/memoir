@@ -53,65 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($error === '') $sent = true;
     }
 }
-?>
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Reset password — Memoir</title>
-    <script>
-    (function () {
-        try {
-            var choice = localStorage.getItem('memoir-theme') || 'system';
-            var darkFlavors = { dark: 1, ocean: 1, midnight: 1 };
-            if (choice === 'system') {
-                choice = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            if (!/^(light|dark|sepia|ocean|midnight)$/.test(choice)) choice = 'light';
-            document.documentElement.dataset.theme = choice;
-            document.documentElement.dataset.mode = darkFlavors[choice] ? 'dark' : 'light';
-            var accent = localStorage.getItem('memoir-accent');
-            if (accent && /^#[0-9a-fA-F]{6}$/.test(accent)) {
-                document.documentElement.style.setProperty('--accent', accent);
-            }
-        } catch (e) {}
-    })();
-    </script>
-    <link rel="icon" type="image/png" href="assets/img/favicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= asset('assets/css/app.css') ?>">
-</head>
-<body class="auth-page">
 
-<main class="auth-card">
-    <img class="auth-logo" src="assets/img/memoir-logo.png" alt="Memoir">
-    <h1>Reset your password</h1>
-    <p>Enter your account email and we will send you a reset link.</p>
-
-    <?php if ($sent): ?>
-    <div class="notice success">If that address belongs to an account, a reset link is on its way. Check your inbox.</div>
-    <?php endif ?>
-
-    <?php if ($error): ?>
-    <div class="notice error"><?= e($error) ?></div>
-    <?php endif ?>
-
-    <?php if (!$sent): ?>
-    <form method="post">
-        <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-
-        <label for="email">Email</label>
-        <input id="email" type="email" name="email" autocomplete="username" required>
-
-        <button class="primary-btn" type="submit">Send reset link</button>
-    </form>
-    <?php endif ?>
-
-    <div class="auth-foot"><a class="auth-link" href="login.php">Back to sign in</a></div>
-</main>
-
-</body>
-</html>
+render('pages/auth/forgot.tpl', [
+    'csrf'  => csrf_token(),
+    'sent'  => $sent,
+    'error' => $error,
+]);

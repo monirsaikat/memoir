@@ -383,7 +383,7 @@ function memoir_install_update(string $requestedVersion): array {
         }
         $zip->close();
 
-        foreach (['VERSION', 'bootstrap.php', 'api.php', 'index.php', 'updater.php'] as $required) {
+        foreach (['VERSION', 'bootstrap.php', 'api.php', 'index.php', 'updater.php', 'app/view.php', 'lib/smarty/libs/Smarty.class.php'] as $required) {
             if (!is_file($extract . '/' . $required)) throw new RuntimeException("The package is missing $required.");
         }
         if (trim((string) file_get_contents($extract . '/VERSION')) !== $requestedVersion) {

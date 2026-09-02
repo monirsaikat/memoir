@@ -38,8 +38,9 @@ SSH, or VPS required.
    automatic “Source code” archive when both are available.
 2. In **cPanel → File Manager**, open `public_html`, create your chosen folder
    (for example `memoir`), upload the ZIP, and extract it.
-3. Make sure `index.php`, `install/`, `assets/`, and `storage/` are directly in
-   that folder—not inside an extra `memoir-main/` directory.
+3. Make sure `index.php`, `install/`, `assets/`, `templates/`, `lib/`, and
+   `storage/` are directly in that folder—not inside an extra `memoir-main/`
+   directory.
 4. In **cPanel → MySQL Database Wizard**, create a database and user, assign the
    user with **ALL PRIVILEGES**, and keep the full cPanel-prefixed names.
 5. In **Select PHP Version** or **MultiPHP Manager**, select PHP 8.1+ and enable
@@ -144,10 +145,16 @@ configuration or database without a backup.
 Clone the repository into a PHP-capable document root, create an empty MySQL
 database, then open `/install/`. There is no build step.
 
+Page markup lives in Smarty templates under `templates/` (see
+`templates/README.md` for the conventions). The engine is vendored under
+`lib/smarty`, so there is still nothing to install; compiled templates are
+cached in `storage/templates`.
+
 Run syntax checks before contributing:
 
 ```bash
 php -l bootstrap.php
+php -l app/view.php
 php -l install/index.php
 php -l login.php
 php -l index.php

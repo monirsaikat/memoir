@@ -3,6 +3,22 @@
 All notable changes to Memoir are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Every page is now rendered from Smarty templates under `templates/`, and the
+  PHP entry points are thin controllers that only gather data. Smarty 5.8.4 is
+  vendored under `lib/smarty`, so installation still needs no Composer, Node.js,
+  or SSH. Compiled templates are cached in `storage/templates`.
+- Page-specific styles for the installer, changelog, and shared-note pages moved
+  from inline `<style>` blocks into `assets/css/`.
+
+### Fixed
+
+- The sign-in, password-reset, and changelog pages now recognise every theme
+  (Forest, Dusk, Aurora, Paper, Nord, Soft) instead of falling back to Light.
+
 ## [1.9.0] - 2026-09-02
 
 ### Added

@@ -5,7 +5,7 @@ DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
 RewriteEngine On
-RewriteRule ^storage/ - [F,L]
+RewriteRule ^(?:storage|templates|lib|app)/ - [F,L]
 RewriteRule ^(?:config\.php(?:\..*)?|\.env|composer\.(?:json|lock)|.*\.(?:sql|bak|log))$ - [F,L,NC]
 </IfModule>
 

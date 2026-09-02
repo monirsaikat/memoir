@@ -1,0 +1,48 @@
+.share-page {
+    min-height: 100%;
+    background: var(--bg);
+    padding: 40px 20px 60px;
+}
+.share-doc {
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 44px 48px;
+    box-shadow: 0 20px 60px rgba(43, 36, 22, .07);
+}
+.share-doc h1.share-title {
+    margin: 0 0 6px;
+    font-size: 32px;
+    letter-spacing: -.04em;
+}
+.share-updated {
+    color: var(--muted);
+    font-size: 12px;
+    display: block;
+    margin-bottom: 26px;
+}
+.share-doc .rich-editor {
+    flex: none;
+    overflow: visible;
+    padding: 0;
+}
+.share-doc .rich-editor a[data-note-link] {
+    pointer-events: none;
+    border-bottom: 0;
+}
+.share-foot {
+    max-width: 760px;
+    margin: 18px auto 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+}
+.share-missing {
+    text-align: center;
+    padding: 60px 20px;
+}
+@media (max-width: 700px) {
+    .share-doc { padding: 28px 22px; border-radius: 14px; }
+}
