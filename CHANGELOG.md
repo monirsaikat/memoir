@@ -5,6 +5,17 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-09-03
+
+### Changed
+
+- The API is now organised into focused handlers for notes, navigation and
+  search, content, backups, account settings, and updates. `api.php` remains the
+  single authenticated front controller, preserving every existing endpoint,
+  request method, response payload, status code, and transaction boundary.
+- Shared request, tag, version-history, search, and note-reference helpers moved
+  into `app/api/helpers.php` for easier maintenance.
+
 ## [2.0.1] - 2026-09-03
 
 ### Changed
@@ -263,7 +274,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.2...HEAD
+[2.0.2]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.2
 [2.0.1]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.1
 [2.0.0]: https://github.com/monirsaikat/memoir/releases/tag/2.0.0
 [1.9.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.9.0

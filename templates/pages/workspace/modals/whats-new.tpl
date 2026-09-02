@@ -14,7 +14,7 @@
             </div>
         </div>
 
-        <p class="release-copy">Memoir 2.0.1 brings two new workspace styles and a cleaner, more consistent interface foundation.</p>
+        <p class="release-copy">Memoir 2.0.2 strengthens the internal API foundation while keeping the writing experience familiar and reliable.</p>
 
         <ul class="release-list">
             <li>
