@@ -40,6 +40,16 @@ jobs:
             sha256sum "memoir-v${version}.zip" > "memoir-v${version}.zip.sha256"
           )
 
+          awk -v heading="## [${version}]" '
+            index($0, heading) == 1 { capture = 1; next }
+            capture && /^## \[/ { exit }
+            capture { print }
+          ' CHANGELOG.md > dist/release-notes.md
+          test -s dist/release-notes.md || {
+            echo "CHANGELOG.md has no release notes for ${version}."
+            exit 1
+          }
+
       - name: Attest release package
         uses: actions/attest-build-provenance@v3
         with:
@@ -57,5 +67,5 @@ jobs:
             dist/memoir-*.zip \
             dist/memoir-*.sha256 \
             --verify-tag \
-            --generate-notes \
+            --notes-file dist/release-notes.md \
             --title "Memoir ${GITHUB_REF_NAME#v}"

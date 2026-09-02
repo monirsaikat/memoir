@@ -5,6 +5,8 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-09-03
+
 ### Changed
 
 - Every page is now rendered from Smarty templates under `templates/`, and the
@@ -18,6 +20,14 @@ All notable changes to Memoir are documented here. This project follows
 
 - The sign-in, password-reset, and changelog pages now recognise every theme
   (Forest, Dusk, Aurora, Paper, Nord, Soft) instead of falling back to Light.
+
+## [2.0.0] - 2026-09-02
+
+### Added
+
+- Nord adds an arctic blue dark workspace, and Soft adds a gentle pastel light
+  workspace. Both themes cover the editor, navigation, dialogs, authentication,
+  code styling, and theme previews.
 
 ## [1.9.0] - 2026-09-02
 
@@ -253,6 +263,9 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.1
+[2.0.0]: https://github.com/monirsaikat/memoir/releases/tag/2.0.0
 [1.9.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.9.0
 [1.8.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.8.0
 [1.7.0]: https://github.com/monirsaikat/memoir/releases/tag/v1.7.0

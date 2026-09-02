@@ -10,32 +10,32 @@
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir {$version}</span>
-                <h3 id="whatsNewTitle">Faster where it matters</h3>
+                <h3 id="whatsNewTitle">A cleaner foundation</h3>
             </div>
         </div>
 
-        <p class="release-copy">Long notes now keep up with your typing, with a luminous new workspace and stronger update connectivity.</p>
+        <p class="release-copy">Memoir 2.0.1 brings two new workspace styles and a cleaner, more consistent interface foundation.</p>
 
         <ul class="release-list">
             <li>
-                <i class="fa-solid fa-gauge-high"></i>
+                <i class="fa-solid fa-snowflake"></i>
                 <div>
-                    <strong>Fast long-note editing</strong>
-                    <span>Word counts and background editor work no longer compete with each keystroke in large documents.</span>
+                    <strong>Nord theme</strong>
+                    <span>An arctic blue dark workspace with crisp contrast across notes, dialogs, code, and navigation.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <i class="fa-solid fa-cloud-sun"></i>
                 <div>
-                    <strong>Aurora theme</strong>
-                    <span>A deep arctic-teal dark theme with cyan and violet light across the complete workspace.</span>
+                    <strong>Soft theme</strong>
+                    <span>A calm pastel light workspace designed for comfortable, distraction-free writing.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-cloud-arrow-down"></i>
+                <i class="fa-solid fa-layer-group"></i>
                 <div>
-                    <strong>More reliable updates</strong>
-                    <span>IPv4 preference, longer connection time, and a release-feed fallback improve shared-host compatibility.</span>
+                    <strong>Consistent everywhere</strong>
+                    <span>Every page now shares the same template system, and all themes work across sign-in, password reset, and the changelog.</span>
                 </div>
             </li>
         </ul>
