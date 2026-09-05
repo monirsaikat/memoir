@@ -2894,6 +2894,11 @@ html[data-mode="dark"] #shareNote.active {
 .activity-row span { color: var(--muted); font-size: 11px; }
 .activity-date { font-size: 10px; }
 
+/* Mail provider toggle (Settings → Email) */
+.mail-provider-toggle { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--panel2); margin: 10px 0 16px; }
+.mail-provider-toggle button { border: 0; background: transparent; border-radius: 8px; padding: 6px 16px; font-size: 12px; color: var(--muted); }
+.mail-provider-toggle button.active { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .1); }
+
 /* Settings helper text */
 .settings-hint {
     margin: 6px 0 0;

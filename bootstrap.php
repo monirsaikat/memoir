@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 define('MEMOIR_VERSION', trim((string) @file_get_contents(__DIR__ . '/VERSION')) ?: '1.0.0');
-define('MEMOIR_SCHEMA_VERSION', '2026-09-05-1');
+define('MEMOIR_SCHEMA_VERSION', '2026-09-05-2');
 
 // Template rendering (Smarty, vendored under lib/smarty) and its view helpers.
 require_once __DIR__ . '/app/view.php';
@@ -36,6 +36,13 @@ if (!file_exists($configFile)) {
 $config = require $configFile;
 $timezone = $config['app']['timezone'] ?? 'UTC';
 date_default_timezone_set(in_array($timezone, timezone_identifiers_list(), true) ? $timezone : 'UTC');
+
+// Must run before anything below queries a column added by a migration —
+// auth_user() in particular is called by almost every entry point, some of
+// which (api.php, login.php, changelog.php) never call ensure_schema()
+// themselves. ensure_schema() is cheap to call repeatedly: it short-circuits
+// via the on-disk marker once the schema is current.
+ensure_schema();
 
 function db(): PDO {
     static $pdo;
@@ -225,6 +232,8 @@ function ensure_schema(): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
         $settingColumns = [
+            'mail_provider' => "ENUM('smtp','brevo') NOT NULL DEFAULT 'smtp'",
+            'brevo_api_key' => "TEXT NULL",
             'backup_enabled' => "TINYINT(1) NOT NULL DEFAULT 1",
             'backup_interval_hours' => "SMALLINT UNSIGNED NOT NULL DEFAULT 24",
             'backup_keep' => "SMALLINT UNSIGNED NOT NULL DEFAULT 7",
@@ -498,6 +507,72 @@ function smtp_send(array $smtp, string $to, string $subject, string $body): void
         fwrite($fp, "QUIT\r\n");
     } finally {
         fclose($fp);
+    }
+}
+
+// Sends transactional mail through the Brevo (formerly Sendinblue) HTTP API
+// instead of raw SMTP — useful on shared hosts that block outbound SMTP
+// ports but allow HTTPS. Throws on any failure, same contract as smtp_send().
+function brevo_send(array $settings, string $to, string $subject, string $body): void {
+    $apiKey = trim((string) ($settings['brevo_api_key'] ?? ''));
+    if ($apiKey === '') {
+        throw new RuntimeException('Email is not configured. Add a Brevo API key in Settings first.');
+    }
+    if (!extension_loaded('curl')) {
+        throw new RuntimeException('The PHP curl extension is required to send mail through Brevo.');
+    }
+    $fromEmail = trim((string) ($settings['smtp_from'] ?? ''));
+    if ($fromEmail === '' || !filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+        throw new RuntimeException('Set a "From" email address in Settings — it must be a sender verified in your Brevo account.');
+    }
+
+    $payload = json_encode([
+        'sender' => ['name' => 'Memoir', 'email' => $fromEmail],
+        'to' => [['email' => $to]],
+        'subject' => $subject,
+        'textContent' => $body,
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+
+    $handle = curl_init('https://api.brevo.com/v3/smtp/email');
+    if ($handle === false) throw new RuntimeException('Could not start the Brevo request.');
+    try {
+        curl_setopt_array($handle, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_HTTPHEADER => [
+                'api-key: ' . $apiKey,
+                'accept: application/json',
+                'content-type: application/json',
+            ],
+        ]);
+        $output = curl_exec($handle);
+        $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+        if ($output === false) {
+            throw new RuntimeException(curl_error($handle) ?: 'Could not reach the Brevo API.');
+        }
+        if ($status < 200 || $status >= 300) {
+            $decoded = json_decode((string) $output, true);
+            throw new RuntimeException('Brevo rejected the email: ' . ($decoded['message'] ?? "HTTP $status"));
+        }
+    } finally {
+        curl_close($handle);
+    }
+}
+
+// Sends transactional mail (invites, password resets) through whichever
+// provider is configured in Settings — raw SMTP, or the Brevo HTTP API.
+function send_transactional_mail(array $settings, string $to, string $subject, string $body): void {
+    if (($settings['mail_provider'] ?? 'smtp') === 'brevo') {
+        brevo_send($settings, $to, $subject, $body);
+    } else {
+        smtp_send($settings, $to, $subject, $body);
     }
 }
 

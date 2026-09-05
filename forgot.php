@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . $link . "\n\n"
                 . "If you did not request this, you can ignore this email — your password is unchanged.\n";
             try {
-                smtp_send($settings, $user['email'], 'Reset your Memoir password', $body);
+                send_transactional_mail($settings, $user['email'], 'Reset your Memoir password', $body);
             } catch (Throwable $exception) {
                 // Invalidate the token again if the mail could not go out.
                 db()->prepare('UPDATE users SET reset_token = NULL, reset_expires = NULL WHERE id = ?')

@@ -61,7 +61,7 @@ case 'invite-collaborator':
         . $link . "\n\n"
         . "If you weren't expecting this, you can ignore this email.\n";
     try {
-        smtp_send($settings, $email, "{$user['name']} shared a Memoir note with you", $body);
+        send_transactional_mail($settings, $email, "{$user['name']} shared a Memoir note with you", $body);
     } catch (Throwable $exception) {
         json_response(['ok' => false, 'message' => 'The invite was saved, but the email could not be sent: ' . $exception->getMessage()], 502);
     }
@@ -130,7 +130,7 @@ case 'resend-invite':
         . $link . "\n\n"
         . "If you weren't expecting this, you can ignore this email.\n";
     try {
-        smtp_send($settings, $email, "{$user['name']} shared a Memoir note with you", $body);
+        send_transactional_mail($settings, $email, "{$user['name']} shared a Memoir note with you", $body);
     } catch (Throwable $exception) {
         json_response(['ok' => false, 'message' => 'Could not resend the invite: ' . $exception->getMessage()], 502);
     }

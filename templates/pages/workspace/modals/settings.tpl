@@ -63,8 +63,14 @@
                 </section>
 
                 <section class="settings-panel hidden" data-panel="email">
-                    <h4>Email (SMTP)</h4>
-                    <div class="settings-grid">
+                    <h4>Email</h4>
+                    <p class="settings-hint">Used for password resets and note-collaborator invites.</p>
+                    <div class="mail-provider-toggle" id="mailProviderToggle" role="radiogroup" aria-label="Mail provider">
+                        <button type="button" data-provider="smtp"{if ($settings.mail_provider|default:'smtp') === 'smtp'} class="active"{/if}>SMTP</button>
+                        <button type="button" data-provider="brevo"{if ($settings.mail_provider|default:'smtp') === 'brevo'} class="active"{/if}>Brevo</button>
+                    </div>
+
+                    <div class="settings-grid" data-mail-provider="smtp">
                         <div>
                             <label>SMTP host</label>
                             <input id="setSmtpHost" autocomplete="off" value="{$settings.smtp_host|default:''}">
@@ -85,13 +91,25 @@
                             <label>SMTP username</label>
                             <input id="setSmtpUser" autocomplete="off" value="{$settings.smtp_user|default:''}">
                         </div>
-                        <div>
+                        <div class="full">
                             <label>SMTP password</label>
                             <input type="password" id="setSmtpPass" autocomplete="new-password" placeholder="Leave blank to keep current">
                         </div>
+                    </div>
+
+                    <div class="settings-grid hidden" data-mail-provider="brevo">
+                        <div class="full">
+                            <label>Brevo API key</label>
+                            <input type="password" id="setBrevoApiKey" autocomplete="new-password" placeholder="{if !empty($settings.brevo_api_key)}Leave blank to keep current{else}xkeysib-…{/if}">
+                            <p class="settings-hint">Find this under SMTP &amp; API &rarr; API Keys in your <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer">Brevo account</a>.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-grid">
                         <div class="full">
                             <label>From email</label>
                             <input id="setSmtpFrom" value="{$settings.smtp_from|default:''}">
+                            <p class="settings-hint" id="fromEmailHint"></p>
                         </div>
                     </div>
                 </section>

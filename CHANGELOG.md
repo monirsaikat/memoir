@@ -5,6 +5,21 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-09-05
+
+### Fixed
+
+- 2.0.3 crashed every page with a 500 error on sites upgraded from an
+  earlier release: `auth_user()` — called by almost every entry point —
+  queried the new `users.role` column before the schema migration that
+  adds it had run. `ensure_schema()` now always runs immediately after
+  the database config loads, before anything else touches the database.
+
+### Added
+
+- Brevo as an alternative mail provider for password resets and
+  collaborator invites, selectable in Settings → Email alongside SMTP.
+
 ## [2.0.3] - 2026-09-05
 
 ### Added
@@ -293,7 +308,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.3...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.4...HEAD
+[2.0.4]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.4
 [2.0.3]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.3
 [2.0.2]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.2
 [2.0.1]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.1

@@ -2698,15 +2698,32 @@
   // only when the last attempt is at least one day old.
   setTimeout(() => loadUpdateState(false), 1200);
 
+  // Mail provider toggle (Settings → Email): SMTP vs Brevo API.
+  const mailProviderToggle = $('#mailProviderToggle');
+  function setMailProvider(provider) {
+    $$('#mailProviderToggle button').forEach(b => b.classList.toggle('active', b.dataset.provider === provider));
+    $$('[data-mail-provider]').forEach(el => el.classList.toggle('hidden', el.dataset.mailProvider !== provider));
+    $('#fromEmailHint').textContent = provider === 'brevo'
+      ? 'Must be a sender verified in your Brevo account.'
+      : 'Shown as the sender for outgoing mail.';
+  }
+  mailProviderToggle.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-provider]');
+    if (btn) setMailProvider(btn.dataset.provider);
+  });
+  setMailProvider($('#mailProviderToggle button.active')?.dataset.provider || 'smtp');
+
   $('#saveSettings').onclick = async () => {
     const body = {
       app_name: $('#setAppName').value,
+      mail_provider: $('#mailProviderToggle button.active')?.dataset.provider || 'smtp',
       smtp_host: $('#setSmtpHost').value,
       smtp_port: $('#setSmtpPort').value,
       smtp_security: $('#setSmtpSecurity').value,
       smtp_user: $('#setSmtpUser').value,
       smtp_pass: $('#setSmtpPass').value,
       smtp_from: $('#setSmtpFrom').value,
+      brevo_api_key: $('#setBrevoApiKey').value,
       backup_enabled: $('#backupEnabled').checked,
       backup_interval_hours: $('#backupInterval').value,
       backup_keep: $('#backupKeep').value,
