@@ -8,6 +8,9 @@
     <!-- Right panel: note editor -->
     <main class="editor-panel">
         <div id="emptyState" class="empty-state">
+            <button id="focusToggleEmpty" class="icon-btn focus-toggle empty-state-focus-toggle" type="button" title="Show sidebar">
+                <i class="fa-solid fa-angles-right"></i>
+            </button>
             <div class="empty-icon"><i class="fa-regular fa-pen-to-square"></i></div>
             <h2>Choose a note</h2>
             <p>Select a note from the list or create a new one.</p>
@@ -23,6 +26,9 @@
             <header class="editor-head">
                 <button class="icon-btn mobile-only" id="backToList" type="button" aria-label="Back to notes">
                     <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <button class="icon-btn focus-toggle" id="focusToggleEditor" type="button" title="Hide sidebar">
+                    <i class="fa-solid fa-angles-left"></i>
                 </button>
                 <div class="crumb">
                     <button type="button" class="crumb-btn" id="crumbFolder" title="Move to folder">Unfiled</button>

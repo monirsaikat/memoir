@@ -5,6 +5,14 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.7] - 2026-09-05
+
+### Added
+
+- Focus mode: hide the sidebar and note list to give the editor the full
+  width while writing. Toggle it from the note list header, the editor
+  header, or the empty state — the choice is remembered per browser.
+
 ## [2.0.6] - 2026-09-05
 
 ### Fixed
@@ -333,7 +341,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.6...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.7...HEAD
+[2.0.7]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.7
 [2.0.6]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.6
 [2.0.5]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.5
 [2.0.4]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.4

@@ -2684,6 +2684,23 @@
   $('#mobileScrim').onclick = closeSidebar;
   $('#backToList').onclick = () => document.body.classList.remove('editor-open');
 
+  // Focus mode: hide the sidebar and note list while writing (desktop only),
+  // remembered per browser. Any of the three .focus-toggle buttons (note
+  // list header, editor header, empty state) works from wherever it's
+  // currently visible, and all three stay in sync.
+  const FOCUS_KEY = 'memoir-focus-mode';
+  const appShell = $('.app-shell');
+  function setFocusMode(on) {
+    appShell.classList.toggle('focus-mode', on);
+    $$('.focus-toggle').forEach(btn => {
+      btn.querySelector('i').className = on ? 'fa-solid fa-angles-right' : 'fa-solid fa-angles-left';
+      btn.title = on ? 'Show sidebar' : 'Hide sidebar';
+    });
+    try { localStorage.setItem(FOCUS_KEY, on ? '1' : '0'); } catch {}
+  }
+  $$('.focus-toggle').forEach(btn => btn.onclick = () => setFocusMode(!appShell.classList.contains('focus-mode')));
+  try { setFocusMode(localStorage.getItem(FOCUS_KEY) === '1'); } catch { setFocusMode(false); }
+
   $('#checkUpdate').onclick = () => loadUpdateState(true);
   $('#installUpdate').onclick = async () => {
     const version = $('#installUpdate').dataset.version;

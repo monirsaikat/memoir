@@ -55,6 +55,21 @@ button { cursor: pointer; }
     overflow: auto
 }
 
+/* Focus mode: hide the sidebar and note list so the editor takes the full
+   width. Toggled from the note list, the editor header, or the empty
+   state — whichever is visible when the user wants it. Desktop only: below
+   760px the sidebar/list are already full-screen overlays, so the concept
+   doesn't apply (the toggle buttons are hidden there too). */
+@media (min-width: 761px) {
+    .app-shell.focus-mode {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .app-shell.focus-mode .sidebar,
+    .app-shell.focus-mode .note-list-panel {
+        display: none;
+    }
+}
+
 /* --------------------------------------------------------------------------
    Sidebar
    -------------------------------------------------------------------------- */
@@ -525,12 +540,18 @@ button { cursor: pointer; }
 .note-list::-webkit-scrollbar-thumb:hover { background-color: #c1bbab; }
 
 .empty-state {
+    position: relative;
     height: 100%;
     display: grid;
     place-content: center;
     text-align: center;
     color: #868880;
     padding: 24px;
+}
+.empty-state-focus-toggle {
+    position: absolute;
+    top: 16px;
+    left: 16px;
 }
 .empty-icon {
     width: 64px;
@@ -1599,6 +1620,7 @@ button { cursor: pointer; }
         height: 100dvh;
     }
     .mobile-only { display: inline-grid; }
+    .focus-toggle { display: none; }
 
     .sidebar {
         display: flex;

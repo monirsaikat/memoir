@@ -12,6 +12,9 @@
                 <span id="listCount">{$notes|count} notes</span>
             </div>
             <div class="list-head-actions">
+                <button id="focusToggleList" class="icon-btn focus-toggle" type="button" title="Hide sidebar">
+                    <i class="fa-solid fa-angles-left"></i>
+                </button>
                 <button id="sortBtn" class="icon-btn" type="button" title="Sort notes">
                     <i class="fa-solid fa-arrow-down-wide-short"></i>
                 </button>
