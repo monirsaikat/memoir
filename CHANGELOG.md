@@ -5,6 +5,15 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.71] - 2026-09-05
+
+### Added
+
+- PHP Mail as a third option in Settings → Email, alongside SMTP and
+  Brevo. Sends through the server's built-in `mail()` function — no
+  credentials to configure, but it depends entirely on the host's own
+  mail setup (sendmail/MTA) being in place.
+
 ## [2.0.7] - 2026-09-05
 
 ### Added
@@ -341,7 +350,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.7...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.71...HEAD
+[2.0.71]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.71
 [2.0.7]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.7
 [2.0.6]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.6
 [2.0.5]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.5

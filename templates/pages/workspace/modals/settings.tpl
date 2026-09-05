@@ -69,6 +69,7 @@
                     <div class="mail-provider-toggle" id="mailProviderToggle" role="radiogroup" aria-label="Mail provider">
                         <button type="button" data-provider="smtp"{if ($settings.mail_provider|default:'smtp') === 'smtp'} class="active"{/if}>SMTP</button>
                         <button type="button" data-provider="brevo"{if ($settings.mail_provider|default:'smtp') === 'brevo'} class="active"{/if}>Brevo</button>
+                        <button type="button" data-provider="phpmail"{if ($settings.mail_provider|default:'smtp') === 'phpmail'} class="active"{/if}>PHP Mail</button>
                     </div>
 
                     <div class="settings-grid" data-mail-provider="smtp">
@@ -103,6 +104,12 @@
                             <label>Brevo API key</label>
                             <input type="password" id="setBrevoApiKey" autocomplete="new-password" placeholder="{if !empty($settings.brevo_api_key)}Leave blank to keep current{else}xkeysib-…{/if}">
                             <p class="settings-hint">Find this under SMTP &amp; API &rarr; API Keys in your <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer">Brevo account</a>.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-grid hidden" data-mail-provider="phpmail">
+                        <div class="full">
+                            <p class="settings-hint">Uses your server's built-in <code>mail()</code> function — whatever sendmail/MTA is already configured for PHP on this host. No credentials to enter, but deliverability (and whether it works at all) depends entirely on your hosting setup. If messages don't arrive, switch to SMTP or Brevo instead.</p>
                         </div>
                     </div>
 

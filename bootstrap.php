@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 define('MEMOIR_VERSION', trim((string) @file_get_contents(__DIR__ . '/VERSION')) ?: '1.0.0');
-define('MEMOIR_SCHEMA_VERSION', '2026-09-05-2');
+define('MEMOIR_SCHEMA_VERSION', '2026-09-05-3');
 
 // Template rendering (Smarty, vendored under lib/smarty) and its view helpers.
 require_once __DIR__ . '/app/view.php';
@@ -232,7 +232,7 @@ function ensure_schema(): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
         $settingColumns = [
-            'mail_provider' => "ENUM('smtp','brevo') NOT NULL DEFAULT 'smtp'",
+            'mail_provider' => "ENUM('smtp','brevo','phpmail') NOT NULL DEFAULT 'smtp'",
             'brevo_api_key' => "TEXT NULL",
             'backup_enabled' => "TINYINT(1) NOT NULL DEFAULT 1",
             'backup_interval_hours' => "SMALLINT UNSIGNED NOT NULL DEFAULT 24",
@@ -243,6 +243,12 @@ function ensure_schema(): void {
             if (!db()->query("SHOW COLUMNS FROM settings LIKE " . db()->quote($column))->fetch()) {
                 db()->exec("ALTER TABLE settings ADD COLUMN $column $definition");
             }
+        }
+        // 2.0.4/2.0.5 shipped mail_provider without 'phpmail' — widen it here
+        // rather than in the loop above, which only adds missing columns.
+        $mailProviderColumn = db()->query("SHOW COLUMNS FROM settings LIKE 'mail_provider'")->fetch();
+        if ($mailProviderColumn && !str_contains($mailProviderColumn['Type'], 'phpmail')) {
+            db()->exec("ALTER TABLE settings MODIFY mail_provider ENUM('smtp','brevo','phpmail') NOT NULL DEFAULT 'smtp'");
         }
         // Trashed notes are purged for good after 30 days.
         db()->exec("DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)");
@@ -566,11 +572,34 @@ function brevo_send(array $settings, string $to, string $subject, string $body):
     }
 }
 
+// Sends transactional mail through PHP's built-in mail() — whatever
+// sendmail/MTA is already configured on the server, no SMTP or API
+// credentials needed. The simplest option, but deliverability and even
+// availability depend entirely on the host's mail setup.
+function php_mail_send(array $settings, string $to, string $subject, string $body): void {
+    $fromEmail = trim((string) ($settings['smtp_from'] ?? ''));
+    if ($fromEmail === '' || !filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+        throw new RuntimeException('Set a "From" email address in Settings first.');
+    }
+    $headers = "From: Memoir <$fromEmail>\r\n"
+        . "MIME-Version: 1.0\r\n"
+        . "Content-Type: text/plain; charset=UTF-8\r\n";
+    $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+    $sent = @mail($to, $encodedSubject, $body, $headers, '-f' . $fromEmail);
+    if (!$sent) {
+        throw new RuntimeException("The server's mail() function could not send the message. Check your hosting's mail configuration, or switch to SMTP/Brevo in Settings.");
+    }
+}
+
 // Sends transactional mail (invites, password resets) through whichever
-// provider is configured in Settings — raw SMTP, or the Brevo HTTP API.
+// provider is configured in Settings — raw SMTP, the Brevo HTTP API, or
+// the server's built-in PHP mail().
 function send_transactional_mail(array $settings, string $to, string $subject, string $body): void {
-    if (($settings['mail_provider'] ?? 'smtp') === 'brevo') {
+    $provider = $settings['mail_provider'] ?? 'smtp';
+    if ($provider === 'brevo') {
         brevo_send($settings, $to, $subject, $body);
+    } elseif ($provider === 'phpmail') {
+        php_mail_send($settings, $to, $subject, $body);
     } else {
         smtp_send($settings, $to, $subject, $body);
     }

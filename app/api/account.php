@@ -41,7 +41,7 @@ case 'settings':
     );
     $stmt->execute([
         mb_substr(trim($data['app_name'] ?? 'Memoir') ?: 'Memoir', 0, 120),
-        in_array(($data['mail_provider'] ?? 'smtp'), ['smtp', 'brevo'], true) ? $data['mail_provider'] : 'smtp',
+        in_array(($data['mail_provider'] ?? 'smtp'), ['smtp', 'brevo', 'phpmail'], true) ? $data['mail_provider'] : 'smtp',
         mb_substr(trim($data['smtp_host'] ?? ''), 0, 190) ?: null,
         max(1, min(65535, (int) ($data['smtp_port'] ?? 587))),
         in_array(($data['smtp_security'] ?? 'tls'), ['tls', 'ssl', 'none'], true) ? $data['smtp_security'] : 'tls',

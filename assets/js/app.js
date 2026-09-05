@@ -2730,14 +2730,16 @@
   // only when the last attempt is at least one day old.
   setTimeout(() => loadUpdateState(false), 1200);
 
-  // Mail provider toggle (Settings → Email): SMTP vs Brevo API.
+  // Mail provider toggle (Settings → Email): SMTP, Brevo API, or PHP mail().
   const mailProviderToggle = $('#mailProviderToggle');
+  const FROM_EMAIL_HINTS = {
+    brevo: 'Must be a sender verified in your Brevo account.',
+    phpmail: "Shown as the sender; some hosts require this to match the server's own domain.",
+  };
   function setMailProvider(provider) {
     $$('#mailProviderToggle button').forEach(b => b.classList.toggle('active', b.dataset.provider === provider));
     $$('[data-mail-provider]').forEach(el => el.classList.toggle('hidden', el.dataset.mailProvider !== provider));
-    $('#fromEmailHint').textContent = provider === 'brevo'
-      ? 'Must be a sender verified in your Brevo account.'
-      : 'Shown as the sender for outgoing mail.';
+    $('#fromEmailHint').textContent = FROM_EMAIL_HINTS[provider] || 'Shown as the sender for outgoing mail.';
   }
   mailProviderToggle.addEventListener('click', e => {
     const btn = e.target.closest('button[data-provider]');
