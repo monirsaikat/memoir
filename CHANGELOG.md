@@ -5,6 +5,16 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.6] - 2026-09-05
+
+### Fixed
+
+- Deleting, permanently deleting, or restoring notes (single or bulk)
+  kept showing the old list until the page was reloaded. The note list
+  renders straight from a local cache when possible, but nothing told
+  that cache a note had just been trashed/destroyed/restored — it now
+  updates immediately so the list reflects the change right away.
+
 ## [2.0.5] - 2026-09-05
 
 ### Added
@@ -323,7 +333,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.5...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.6...HEAD
+[2.0.6]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.6
 [2.0.5]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.5
 [2.0.4]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.4
 [2.0.3]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.3

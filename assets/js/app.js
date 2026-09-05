@@ -534,6 +534,10 @@
     } else {
       await api('delete-notes', { method: 'POST', body: JSON.stringify({ ids: [...selectedIds] }) });
     }
+    // refreshList() renders straight from noteCache when possible; without
+    // this, notes we just deleted/destroyed would keep showing until a full
+    // page reload rebuilt the cache from the server.
+    selectedIds.forEach(id => noteCache.delete(id));
     if (current && selectedIds.has(String(current.id))) closeEditor();
     setSelectMode(false);
     await refreshList();
@@ -542,6 +546,13 @@
   $('#bulkRestore').onclick = async () => {
     if (!selectedIds.size) return;
     await api('restore-notes', { method: 'POST', body: JSON.stringify({ ids: [...selectedIds] }) });
+    // A restored note's cached copy still says deleted_at is set (it was
+    // fetched while sitting in the trash) — clear it so "All notes" shows
+    // the note again without needing a reload.
+    selectedIds.forEach(id => {
+      const cached = noteCache.get(id);
+      if (cached) cached.deleted_at = null;
+    });
     if (current && selectedIds.has(String(current.id))) closeEditor();
     setSelectMode(false);
     await refreshList();
@@ -592,6 +603,7 @@
   $('#deleteNote').onclick = async () => {
     if (!current) return;
     await api('delete-note', { method: 'POST', body: JSON.stringify({ id: current.id }) });
+    noteCache.delete(String(current.id));
     closeEditor();
     await refreshList();
   };
@@ -600,6 +612,8 @@
     if (!current) return;
     await api('restore-notes', { method: 'POST', body: JSON.stringify({ ids: [current.id] }) });
     const id = current.id;
+    const cached = noteCache.get(String(id));
+    if (cached) cached.deleted_at = null;
     await refreshList();
     await loadNote(id, false);
   };
@@ -607,6 +621,7 @@
   $('#destroyNote').onclick = async () => {
     if (!current || !confirm('Delete this note forever? This cannot be undone.')) return;
     await api('destroy-notes', { method: 'POST', body: JSON.stringify({ ids: [current.id] }) });
+    noteCache.delete(String(current.id));
     closeEditor();
     await refreshList();
   };
