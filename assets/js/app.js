@@ -1821,6 +1821,30 @@
   }
 
   $('#historyNote').onclick = openHistory;
+
+  async function openActivity() {
+    if (!current) return;
+    const list = $('#activityList');
+    list.innerHTML = '<span class="history-empty">Loading activity…</span>';
+    openModal('#activityModal');
+    try {
+      const d = await api('note-activity', { query: `&note_id=${current.id}` });
+      if (!d.activity.length) {
+        list.innerHTML = '<span class="history-empty">No activity yet on this note.</span>';
+        return;
+      }
+      list.innerHTML = d.activity.map(entry => `
+        <div class="activity-row">
+          <strong>${escapeHtml(entry.actor_name || 'Someone')}</strong>
+          <span>${escapeHtml(entry.message)}</span>
+          <span class="activity-date">${escapeHtml(formatVersionDate(entry.created_at))}</span>
+        </div>`).join('');
+    } catch (err) {
+      list.innerHTML = `<span class="history-empty">${escapeHtml(err.message)}</span>`;
+    }
+  }
+
+  $('#activityNote').onclick = openActivity;
   $('#historyList').onclick = e => {
     const button = e.target.closest('button[data-version-id]');
     if (button) previewVersion(button.dataset.versionId);
@@ -2302,6 +2326,15 @@
   // ---------------------------------------------------------------------
 
   const shareMenu = $('#shareMenu');
+  const isOwner = window.MEMOIR.userRole === 'owner';
+  if (!isOwner) {
+    // Trash/restore/permanent-delete and public link sharing are the note
+    // owner's call — a collaborator only edits content.
+    $('#shareNote').classList.add('hidden');
+    $('#deleteNote').classList.add('hidden');
+    $('#restoreNote').classList.add('hidden');
+    $('#destroyNote').classList.add('hidden');
+  }
 
   function shareUrlFor(token) {
     return new URL(`share.php?t=${token}`, location.href).href;
@@ -2315,6 +2348,30 @@
     $('#shareNote').classList.toggle('active', shared);
   }
 
+  function collaboratorRowHtml(c) {
+    const label = c.status === 'pending' ? `${escapeHtml(c.invited_email)} <em>(invited)</em>` : escapeHtml(c.user_name || c.invited_email);
+    const resend = c.status === 'pending' ? `<button type="button" data-resend="${c.id}" title="Resend invite"><i class="fa-solid fa-rotate"></i></button>` : '';
+    return `<div class="collaborator-row" data-collaborator="${c.id}">
+      <span>${label}</span>
+      ${resend}
+      <button type="button" class="danger" data-remove="${c.id}" title="Remove access"><i class="fa-regular fa-trash-can"></i></button>
+    </div>`;
+  }
+
+  async function loadCollaborators() {
+    const list = $('#collaboratorList');
+    if (!current) return;
+    list.innerHTML = '<span class="history-empty">Loading…</span>';
+    try {
+      const d = await api('list-collaborators', { query: `&note_id=${current.id}` });
+      list.innerHTML = d.collaborators.length
+        ? d.collaborators.map(collaboratorRowHtml).join('')
+        : '<span class="history-empty">Only you have access.</span>';
+    } catch (err) {
+      list.innerHTML = `<span class="history-empty">${escapeHtml(err.message)}</span>`;
+    }
+  }
+
   $('#shareNote').onclick = e => {
     if (!current || current.deleted_at) return;
     if (!shareMenu.classList.contains('hidden')) {
@@ -2322,8 +2379,51 @@
       return;
     }
     renderShareMenu();
+    $('#inviteStatus').textContent = '';
+    $('#inviteEmail').value = '';
+    loadCollaborators();
     openMiniMenu(shareMenu, e.currentTarget);
   };
+
+  $('#inviteForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!current) return;
+    const email = $('#inviteEmail').value.trim();
+    const status = $('#inviteStatus');
+    status.className = 'pw-status';
+    status.textContent = 'Sending invite…';
+    try {
+      await api('invite-collaborator', { method: 'POST', body: JSON.stringify({ note_id: current.id, email }) });
+      status.className = 'pw-status ok';
+      status.textContent = 'Invite sent.';
+      $('#inviteEmail').value = '';
+      loadCollaborators();
+    } catch (err) {
+      status.className = 'pw-status error';
+      status.textContent = err.message;
+    }
+  });
+
+  $('#collaboratorList').addEventListener('click', async e => {
+    const removeBtn = e.target.closest('button[data-remove]');
+    const resendBtn = e.target.closest('button[data-resend]');
+    if (!current || (!removeBtn && !resendBtn)) return;
+    const status = $('#inviteStatus');
+    try {
+      if (removeBtn) {
+        if (!confirm('Remove this person\'s access to the note?')) return;
+        await api('remove-collaborator', { method: 'POST', body: JSON.stringify({ note_id: current.id, id: removeBtn.dataset.remove }) });
+      } else {
+        await api('resend-invite', { method: 'POST', body: JSON.stringify({ note_id: current.id, id: resendBtn.dataset.resend }) });
+        status.className = 'pw-status ok';
+        status.textContent = 'Invite resent.';
+      }
+      loadCollaborators();
+    } catch (err) {
+      status.className = 'pw-status error';
+      status.textContent = err.message;
+    }
+  });
 
   $('#shareEnable').onclick = async () => {
     if (!current) return;
@@ -2698,8 +2798,39 @@
     if (!btn) return;
     $$('.settings-nav button').forEach(x => x.classList.toggle('active', x === btn));
     $$('.settings-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== btn.dataset.pane));
-    $('#saveSettings').classList.toggle('hidden', btn.dataset.pane === 'updates');
+    $('#saveSettings').classList.toggle('hidden', btn.dataset.pane === 'updates' || btn.dataset.pane === 'activity');
+    if (btn.dataset.pane === 'activity') loadGlobalActivity();
   });
+
+  function formatActivityDate(value) {
+    try {
+      return new Date(value.replace(' ', 'T')).toLocaleString(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+      });
+    } catch {
+      return value || '';
+    }
+  }
+
+  async function loadGlobalActivity() {
+    const list = $('#globalActivityList');
+    list.innerHTML = '<span class="history-empty">Loading activity…</span>';
+    try {
+      const d = await api('activity');
+      if (!d.activity.length) {
+        list.innerHTML = '<span class="history-empty">No activity yet.</span>';
+        return;
+      }
+      list.innerHTML = d.activity.map(entry => `
+        <div class="activity-row">
+          <strong>${escapeHtml(entry.note_title || 'Untitled note')}</strong>
+          <span>${escapeHtml(entry.message)}</span>
+          <span class="activity-date">${escapeHtml(formatActivityDate(entry.created_at))}</span>
+        </div>`).join('');
+    } catch (err) {
+      list.innerHTML = `<span class="history-empty">${escapeHtml(err.message)}</span>`;
+    }
+  }
 
   // ---------------------------------------------------------------------
   // Change password

@@ -8,6 +8,7 @@
 
 {block name=meta}
     <meta name="csrf-token" content="{$csrf}">
+    <meta name="user-role" content="{$userRole}">
 {/block}
 
 {block name=title}{$appName}{/block}
@@ -56,6 +57,8 @@
 {include file='pages/workspace/modals/note-style.tpl'}
 
 {include file='pages/workspace/modals/history.tpl'}
+
+{include file='pages/workspace/modals/activity.tpl'}
 
 {include file='pages/workspace/modals/settings.tpl'}
 

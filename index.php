@@ -9,25 +9,36 @@ maybe_create_automatic_backup();
 
 $settings = db()->query("SELECT * FROM settings WHERE id=1")->fetch();
 
-$folders = db()->query(
-    "SELECT f.*, (SELECT COUNT(*) FROM notes n WHERE n.folder_id = f.id AND n.deleted_at IS NULL) note_count
-     FROM folders f
-     ORDER BY sort_order, name"
-)->fetchAll();
+$folders = [];
+if ($user['role'] === 'owner') {
+    $folders = db()->query(
+        "SELECT f.*, (SELECT COUNT(*) FROM notes n WHERE n.folder_id = f.id AND n.deleted_at IS NULL) note_count
+         FROM folders f
+         ORDER BY sort_order, name"
+    )->fetchAll();
+}
 
-$notes = db()->query(
+$accessible = accessible_notes_clause();
+
+$notesStmt = db()->prepare(
     "SELECT n.*, f.name folder_name
      FROM notes n
      LEFT JOIN folders f ON f.id = n.folder_id
-     WHERE n.deleted_at IS NULL
+     WHERE n.deleted_at IS NULL AND $accessible
      ORDER BY n.is_pinned DESC, n.updated_at DESC
      LIMIT 100"
-)->fetchAll();
+);
+$notesStmt->execute([$user['id'], $user['id']]);
+$notes = $notesStmt->fetchAll();
 
-$trashCount = (int) db()->query("SELECT COUNT(*) FROM notes WHERE deleted_at IS NOT NULL")->fetchColumn();
+$trashStmt = db()->prepare("SELECT COUNT(*) FROM notes n WHERE deleted_at IS NOT NULL AND $accessible");
+$trashStmt->execute([$user['id'], $user['id']]);
+$trashCount = (int) $trashStmt->fetchColumn();
 
 $tagCounts = [];
-foreach (db()->query("SELECT tags FROM notes WHERE tags <> '' AND deleted_at IS NULL")->fetchAll() as $row) {
+$tagStmt = db()->prepare("SELECT tags FROM notes n WHERE tags <> '' AND deleted_at IS NULL AND $accessible");
+$tagStmt->execute([$user['id'], $user['id']]);
+foreach ($tagStmt->fetchAll() as $row) {
     foreach (explode(',', $row['tags']) as $tag) {
         $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
     }
@@ -85,6 +96,7 @@ render('pages/workspace/index.tpl', [
     'csrf' => $csrfToken,
     'version' => MEMOIR_VERSION,
     'appName' => $settings['app_name'] ?? 'Memoir',
+    'userRole' => $user['role'],
     'settings' => $settings,
     'folders' => $folders,
     'notes' => $notes,

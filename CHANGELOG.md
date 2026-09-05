@@ -5,6 +5,25 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-09-05
+
+### Added
+
+- Note collaborators: invite someone by email to edit a specific note. They
+  accept via a signed link, creating a scoped collaborator account if they
+  don't already have one; access can be revoked at any time from the note's
+  Share menu.
+- Activity log: every note now has an Activity panel showing who edited,
+  trashed, restored, or shared it and when. Workspace owners also get a
+  global Activity view in Settings covering every note they own.
+
+### Changed
+
+- Notes now carry an owner. Existing single-owner installs are migrated
+  automatically; folders, workspace settings, and backups remain
+  owner-only, while invited collaborators only ever see the notes shared
+  with them.
+
 ## [2.0.2] - 2026-09-03
 
 ### Changed
@@ -274,7 +293,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.2...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.3...HEAD
+[2.0.3]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.3
 [2.0.2]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.2
 [2.0.1]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.1
 [2.0.0]: https://github.com/monirsaikat/memoir/releases/tag/2.0.0

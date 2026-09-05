@@ -12,11 +12,16 @@
             <nav class="settings-nav">
                 <span class="settings-nav-title" id="settingsModalTitle">Settings</span>
                 <button type="button" class="active" data-pane="appearance"><i class="fa-solid fa-palette"></i> Appearance</button>
+                {if $userRole === 'owner'}
                 <button type="button" data-pane="general"><i class="fa-solid fa-sliders"></i> General</button>
                 <button type="button" data-pane="email"><i class="fa-solid fa-envelope"></i> Email</button>
+                {/if}
                 <button type="button" data-pane="account"><i class="fa-solid fa-user-shield"></i> Account</button>
+                {if $userRole === 'owner'}
                 <button type="button" data-pane="data"><i class="fa-solid fa-file-import"></i> Data</button>
+                <button type="button" data-pane="activity"><i class="fa-solid fa-clock-rotate-left"></i> Activity</button>
                 <button type="button" data-pane="updates"><i class="fa-solid fa-cloud-arrow-down"></i> Updates <span class="update-nav-badge hidden" id="updateNavBadge">1</span></button>
+                {/if}
                 <div class="settings-nav-foot">Memoir v{$version}</div>
             </nav>
 
@@ -153,6 +158,12 @@
                         <button type="button" class="danger-outline" id="restoreBackup"><i class="fa-solid fa-rotate-left"></i> Choose backup to restore</button>
                     </div>
                     <span id="restoreBackupStatus" class="pw-status"></span>
+                </section>
+
+                <section class="settings-panel hidden" data-panel="activity">
+                    <h4>Activity</h4>
+                    <p class="settings-hint">The latest actions across your notes — edits, trash, restores, and collaborator changes.</p>
+                    <div class="activity-list" id="globalActivityList"><span class="history-empty">Loading activity…</span></div>
                 </section>
 
                 <section class="settings-panel hidden" data-panel="updates">

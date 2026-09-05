@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 define('MEMOIR_VERSION', trim((string) @file_get_contents(__DIR__ . '/VERSION')) ?: '1.0.0');
-define('MEMOIR_SCHEMA_VERSION', '2026-09-01-1');
+define('MEMOIR_SCHEMA_VERSION', '2026-09-05-1');
 
 // Template rendering (Smarty, vendored under lib/smarty) and its view helpers.
 require_once __DIR__ . '/app/view.php';
@@ -77,9 +77,51 @@ function verify_csrf(bool $json = true): void {
 
 function auth_user(): ?array {
     if (empty($_SESSION['user_id'])) return null;
-    $stmt = db()->prepare("SELECT id,email,name FROM users WHERE id=? LIMIT 1");
+    $stmt = db()->prepare("SELECT id,email,name,role FROM users WHERE id=? LIMIT 1");
     $stmt->execute([$_SESSION['user_id']]);
-    return $stmt->fetch() ?: null;
+    $user = $stmt->fetch() ?: null;
+    if ($user) $user['role'] = $user['role'] ?: 'owner';
+    return $user;
+}
+
+// The role a user holds on a specific note: 'owner', 'editor' (an accepted
+// collaborator), or null when they have no access at all.
+function note_role_for_user(int $noteId, int $userId): ?string {
+    $stmt = db()->prepare("SELECT owner_id FROM notes WHERE id = ? LIMIT 1");
+    $stmt->execute([$noteId]);
+    $ownerId = $stmt->fetchColumn();
+    if ($ownerId === false) return null;
+    if ((int) $ownerId === $userId) return 'owner';
+
+    $stmt = db()->prepare(
+        "SELECT role FROM note_collaborators WHERE note_id = ? AND user_id = ? AND status = 'accepted' LIMIT 1"
+    );
+    $stmt->execute([$noteId, $userId]);
+    $role = $stmt->fetchColumn();
+    return $role !== false ? (string) $role : null;
+}
+
+// 404s (rather than 403s) so a collaborator probing note IDs cannot tell
+// "doesn't exist" apart from "exists, but you can't see it".
+function require_note_access(int $noteId, int $userId, string $need = 'editor'): string {
+    $role = note_role_for_user($noteId, $userId);
+    if ($role === null || ($need === 'owner' && $role !== 'owner')) {
+        json_response(['ok' => false, 'message' => 'Note not found'], 404);
+    }
+    return $role;
+}
+
+// SQL fragment restricting a notes query to what a user can see: notes they
+// own, plus notes shared with them as an accepted collaborator. Expects the
+// user id bound twice, in the order the two placeholders appear.
+function accessible_notes_clause(string $alias = 'n'): string {
+    return "($alias.owner_id = ? OR $alias.id IN (SELECT note_id FROM note_collaborators WHERE user_id = ? AND status = 'accepted'))";
+}
+
+function log_activity(int $actorId, ?int $noteId, string $action, string $message): void {
+    db()->prepare(
+        "INSERT INTO activity_log(note_id, actor_id, action, message) VALUES (?, ?, ?, ?)"
+    )->execute([$noteId, $actorId, $action, mb_substr($message, 0, 255)]);
 }
 
 function require_auth(): array {
@@ -138,6 +180,48 @@ function ensure_schema(): void {
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_version_note (note_id, created_at),
                 CONSTRAINT fk_versions_note FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        if (!db()->query("SHOW COLUMNS FROM users LIKE 'role'")->fetch()) {
+            db()->exec("ALTER TABLE users ADD COLUMN role ENUM('owner','collaborator') NOT NULL DEFAULT 'owner'");
+        }
+        if (!db()->query("SHOW COLUMNS FROM notes LIKE 'owner_id'")->fetch()) {
+            db()->exec("ALTER TABLE notes ADD COLUMN owner_id INT UNSIGNED NULL AFTER folder_id, ADD INDEX(owner_id)");
+            db()->exec("UPDATE notes SET owner_id = (SELECT MIN(id) FROM users) WHERE owner_id IS NULL");
+            db()->exec("ALTER TABLE notes ADD CONSTRAINT fk_notes_owner FOREIGN KEY(owner_id) REFERENCES users(id) ON DELETE SET NULL");
+        }
+        db()->exec(
+            "CREATE TABLE IF NOT EXISTS note_collaborators (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                note_id INT UNSIGNED NOT NULL,
+                invited_email VARCHAR(190) NOT NULL,
+                user_id INT UNSIGNED NULL,
+                role VARCHAR(20) NOT NULL DEFAULT 'editor',
+                status ENUM('pending','accepted','revoked') NOT NULL DEFAULT 'pending',
+                invite_token_hash CHAR(64) NULL,
+                invite_expires DATETIME NULL,
+                invited_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                accepted_at DATETIME NULL,
+                UNIQUE KEY uq_note_collaborator (note_id, invited_email),
+                INDEX idx_collaborator_user (user_id, status),
+                UNIQUE KEY uq_invite_token (invite_token_hash),
+                CONSTRAINT fk_collaborators_note FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE,
+                CONSTRAINT fk_collaborators_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        db()->exec(
+            "CREATE TABLE IF NOT EXISTS activity_log (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                note_id INT UNSIGNED NULL,
+                actor_id INT UNSIGNED NULL,
+                action VARCHAR(40) NOT NULL,
+                message VARCHAR(255) NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_activity_note (note_id, created_at),
+                INDEX idx_activity_actor (actor_id, created_at),
+                CONSTRAINT fk_activity_note FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE,
+                CONSTRAINT fk_activity_actor FOREIGN KEY(actor_id) REFERENCES users(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
         $settingColumns = [

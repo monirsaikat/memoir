@@ -33,6 +33,7 @@
             </button>
         </nav>
 
+        {if $userRole === 'owner'}
         <div class="section-title">
             <span>Folders</span>
             <button id="addFolder" title="Add folder"><i class="fa-solid fa-plus"></i></button>
@@ -52,6 +53,7 @@
             </div>
             {/foreach}
         </div>
+        {/if}
 
         <div class="section-title" id="tagSectionTitle"{if !$tagCounts} hidden{/if}><span>Tags</span></div>
         <div id="tagList" class="tag-list">

@@ -26,6 +26,7 @@ case 'change-password':
 
 case 'settings':
     require_method('POST');
+    require_owner();
     $data = request_json();
 
     $existing = db()->query("SELECT * FROM settings WHERE id=1")->fetch();

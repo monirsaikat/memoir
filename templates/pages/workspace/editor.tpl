@@ -32,6 +32,7 @@
                 <div class="editor-actions">
                     <button class="icon-btn" id="shareNote" title="Share note" aria-label="Share note"><i class="fa-solid fa-share-nodes"></i></button>
                     <button class="icon-btn" id="historyNote" title="Version history" aria-label="Version history"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                    <button class="icon-btn" id="activityNote" title="Activity" aria-label="Note activity"><i class="fa-solid fa-list-check"></i></button>
                     <button class="icon-btn" id="pinNote" title="Pin" aria-label="Pin note"><i class="fa-solid fa-thumbtack"></i></button>
                     <button class="icon-btn" id="noteStyle" title="Note style" aria-label="Note style"><i class="fa-solid fa-palette"></i></button>
                     <button class="icon-btn danger" id="deleteNote" title="Delete" aria-label="Delete note"><i class="fa-regular fa-trash-can"></i></button>

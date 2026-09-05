@@ -12,6 +12,15 @@ function request_json(): array {
     return json_decode(file_get_contents('php://input'), true) ?: [];
 }
 
+// Folder management and workspace settings are owner-only — collaborators
+// only ever interact with the specific notes shared with them.
+function require_owner(): void {
+    global $user;
+    if (($user['role'] ?? 'owner') !== 'owner') {
+        json_response(['ok' => false, 'message' => 'Only the workspace owner can do this'], 403);
+    }
+}
+
 // Normalize a submitted tag list into the stored "a,b,c" form:
 // trimmed, comma-free, max 30 chars each, unique, at most 8 tags.
 function sanitize_tags(mixed $raw): string {

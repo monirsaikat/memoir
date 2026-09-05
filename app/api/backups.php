@@ -1,5 +1,7 @@
 <?php
 
+require_owner();
+
 switch ($action) {
 
 case 'backup-export':
@@ -104,8 +106,8 @@ case 'backup-restore':
 
         $noteIds = [];
         $insertNote = db()->prepare(
-            "INSERT INTO notes(id, folder_id, title, content, color, tags, icon, is_pinned, deleted_at, share_token, created_at, updated_at)
-             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)"
+            "INSERT INTO notes(id, folder_id, owner_id, title, content, color, tags, icon, is_pinned, deleted_at, share_token, created_at, updated_at)
+             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)"
         );
         foreach ($payload['notes'] as $row) {
             if (!is_array($row)) continue;
@@ -122,7 +124,9 @@ case 'backup-restore':
             $deleted = valid_backup_datetime($row['deleted_at'] ?? null);
             $created = valid_backup_datetime($row['created_at'] ?? null) ?? date('Y-m-d H:i:s');
             $updated = valid_backup_datetime($row['updated_at'] ?? null) ?? $created;
-            $insertNote->execute([$id, $folderId, $title, $content, $color, $tags, $icon, !empty($row['is_pinned']) ? 1 : 0, $deleted, $created, $updated]);
+            // Restored notes belong to whoever ran the restore — a backup carries
+            // no ownership/collaborator data of its own.
+            $insertNote->execute([$id, $folderId, $user['id'], $title, $content, $color, $tags, $icon, !empty($row['is_pinned']) ? 1 : 0, $deleted, $created, $updated]);
         }
 
         $insertVersion = db()->prepare(

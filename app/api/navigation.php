@@ -4,6 +4,7 @@ switch ($action) {
 
 case 'folder':
     require_method('POST');
+    require_owner();
     $data = request_json();
 
     $name = mb_substr(trim((string) ($data['name'] ?? '')), 0, 120);
@@ -26,6 +27,7 @@ case 'folder':
 
 case 'rename-folder':
     require_method('POST');
+    require_owner();
     $data = request_json();
 
     $id = (int) ($data['id'] ?? 0);
@@ -43,6 +45,7 @@ case 'rename-folder':
 
 case 'delete-folder':
     require_method('POST');
+    require_owner();
     $data = request_json();
     $id = (int) ($data['id'] ?? 0);
     if (!$id) {
@@ -55,6 +58,7 @@ case 'delete-folder':
 
 case 'reorder-folders':
     require_method('POST');
+    require_owner();
     $data = request_json();
     $ids = array_values(array_filter(
         array_map('intval', (array) ($data['ids'] ?? [])),
@@ -101,8 +105,8 @@ case 'search':
 
     $sql = "SELECT n.id, n.folder_id, n.title, n.content, n.icon, n.color, n.tags, n.is_pinned, n.deleted_at, n.updated_at, f.name folder_name
             FROM notes n
-            LEFT JOIN folders f ON f.id = n.folder_id WHERE 1=1";
-    $params = [];
+            LEFT JOIN folders f ON f.id = n.folder_id WHERE " . accessible_notes_clause();
+    $params = [$user['id'], $user['id']];
 
     if ($state === 'active') $sql .= " AND n.deleted_at IS NULL";
     elseif ($state === 'trash') $sql .= " AND n.deleted_at IS NOT NULL";
@@ -184,27 +188,38 @@ case 'search':
 
 case 'sidebar':
     require_method('GET');
+    $accessible = accessible_notes_clause();
     $tagCounts = [];
-    foreach (db()->query("SELECT tags FROM notes WHERE tags <> '' AND deleted_at IS NULL")->fetchAll() as $row) {
+    $tagStmt = db()->prepare("SELECT tags FROM notes n WHERE tags <> '' AND deleted_at IS NULL AND $accessible");
+    $tagStmt->execute([$user['id'], $user['id']]);
+    foreach ($tagStmt->fetchAll() as $row) {
         foreach (explode(',', $row['tags']) as $tag) {
             $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
         }
     }
     ksort($tagCounts, SORT_NATURAL | SORT_FLAG_CASE);
 
-    $folderCounts = db()->query(
-        "SELECT f.id, COUNT(n.id) c
-         FROM folders f
-         LEFT JOIN notes n ON n.folder_id = f.id AND n.deleted_at IS NULL
-         GROUP BY f.id"
-    )->fetchAll(PDO::FETCH_KEY_PAIR);
+    $folderCounts = [];
+    if ($user['role'] === 'owner') {
+        $folderCounts = db()->query(
+            "SELECT f.id, COUNT(n.id) c
+             FROM folders f
+             LEFT JOIN notes n ON n.folder_id = f.id AND n.deleted_at IS NULL
+             GROUP BY f.id"
+        )->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+
+    $allStmt = db()->prepare("SELECT COUNT(*) FROM notes n WHERE deleted_at IS NULL AND $accessible");
+    $allStmt->execute([$user['id'], $user['id']]);
+    $trashStmt = db()->prepare("SELECT COUNT(*) FROM notes n WHERE deleted_at IS NOT NULL AND $accessible");
+    $trashStmt->execute([$user['id'], $user['id']]);
 
     json_response([
         'ok' => true,
         'tags' => $tagCounts,
         'folders' => $folderCounts,
-        'all' => (int) db()->query("SELECT COUNT(*) FROM notes WHERE deleted_at IS NULL")->fetchColumn(),
-        'trash' => (int) db()->query("SELECT COUNT(*) FROM notes WHERE deleted_at IS NOT NULL")->fetchColumn(),
+        'all' => (int) $allStmt->fetchColumn(),
+        'trash' => (int) $trashStmt->fetchColumn(),
     ]);
 
 }

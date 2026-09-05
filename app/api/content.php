@@ -9,6 +9,9 @@ case 'share-note':
     if (!$id) {
         json_response(['ok' => false, 'message' => 'Unknown note'], 422);
     }
+    // Only the owner controls the anonymous public link — a collaborator can
+    // edit the note's content but not decide who else can view it.
+    require_note_access($id, $user['id'], 'owner');
 
     if (!empty($data['enable'])) {
         $token = bin2hex(random_bytes(24));
@@ -17,6 +20,7 @@ case 'share-note':
         if (!$stmt->rowCount()) {
             json_response(['ok' => false, 'message' => 'Note not found'], 404);
         }
+        log_activity($user['id'], $id, 'link_share_enabled', sprintf('%s created a public share link', $user['name']));
         global $config;
         json_response([
             'ok' => true,
@@ -26,6 +30,7 @@ case 'share-note':
     }
 
     db()->prepare("UPDATE notes SET share_token = NULL WHERE id = ?")->execute([$id]);
+    log_activity($user['id'], $id, 'link_share_disabled', sprintf('%s turned off the public share link', $user['name']));
     json_response(['ok' => true]);
 
 case 'import':
@@ -60,7 +65,7 @@ case 'import':
         $title = mb_substr(trim($title) ?: 'Imported note', 0, 255);
 
         $content = sanitize_note_html(markdown_to_note_html($raw));
-        db()->prepare("INSERT INTO notes(title, content) VALUES(?, ?)")->execute([$title, $content]);
+        db()->prepare("INSERT INTO notes(owner_id, title, content) VALUES(?, ?, ?)")->execute([$user['id'], $title, $content]);
         $imported++;
     }
 

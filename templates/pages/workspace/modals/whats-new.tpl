@@ -10,32 +10,32 @@
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir {$version}</span>
-                <h3 id="whatsNewTitle">A cleaner foundation</h3>
+                <h3 id="whatsNewTitle">Share a note, see who did what</h3>
             </div>
         </div>
 
-        <p class="release-copy">Memoir 2.0.2 strengthens the internal API foundation while keeping the writing experience familiar and reliable.</p>
+        <p class="release-copy">Memoir 2.0.3 adds collaborators and an activity log, so you can invite someone to edit a note and keep track of changes.</p>
 
         <ul class="release-list">
             <li>
-                <i class="fa-solid fa-snowflake"></i>
+                <i class="fa-solid fa-user-plus"></i>
                 <div>
-                    <strong>Nord theme</strong>
-                    <span>An arctic blue dark workspace with crisp contrast across notes, dialogs, code, and navigation.</span>
+                    <strong>Invite collaborators</strong>
+                    <span>Share a note with someone by email. They accept via a secure link and can edit that note right away.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-cloud-sun"></i>
+                <i class="fa-solid fa-clock-rotate-left"></i>
                 <div>
-                    <strong>Soft theme</strong>
-                    <span>A calm pastel light workspace designed for comfortable, distraction-free writing.</span>
+                    <strong>Activity log</strong>
+                    <span>Every note tracks who edited, shared, trashed, or restored it. Owners get a workspace-wide activity view in Settings.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-layer-group"></i>
+                <i class="fa-solid fa-lock"></i>
                 <div>
-                    <strong>Consistent everywhere</strong>
-                    <span>Every page now shares the same template system, and all themes work across sign-in, password reset, and the changelog.</span>
+                    <strong>Scoped access</strong>
+                    <span>Collaborators only ever see the notes shared with them — folders, settings, and backups stay with the workspace owner.</span>
                 </div>
             </li>
         </ul>

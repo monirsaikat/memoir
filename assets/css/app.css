@@ -2869,6 +2869,31 @@ html[data-mode="dark"] #shareNote.active {
     color: color-mix(in srgb, var(--accent) 55%, white);
 }
 
+/* Collaborators (inside the share popover) */
+.share-divider { height: 1px; background: var(--line); margin: 4px 0 12px; }
+.invite-form { display: flex; gap: 8px; margin-bottom: 8px; }
+.invite-form input { flex: 1; border: 1px solid var(--line); border-radius: 9px; background: var(--panel2); padding: 8px 10px; font-size: 11.5px; color: var(--ink); outline: 0; }
+.invite-form button { border-radius: 9px; padding: 8px 12px; font-size: 11.5px; }
+.collaborator-list { display: grid; gap: 4px; margin-top: 6px; max-height: 160px; overflow: auto; }
+.collaborator-row { display: flex; align-items: center; gap: 8px; padding: 6px 2px; font-size: 12px; }
+.collaborator-row span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collaborator-row em { color: var(--muted); font-style: normal; }
+.collaborator-row button { border: 0; background: transparent; padding: 4px; color: var(--muted); }
+.collaborator-row button:hover { color: var(--ink); }
+.collaborator-row button.danger:hover { color: #b04a4a; }
+
+/* Activity log (note popover + global settings pane) */
+.activity-modal { padding: 0; overflow: hidden; }
+.activity-modal .history-head { margin-bottom: 0; }
+.activity-modal .activity-list { border-radius: 0; margin: 0; }
+.activity-modal .modal-actions { margin: 0; padding: 12px 18px; border-top: 1px solid var(--line); }
+.activity-list { overflow: auto; max-height: 340px; padding: 10px; background: var(--panel2); border-radius: 10px; display: grid; gap: 2px; }
+.activity-row { padding: 10px; border-radius: 9px; display: grid; gap: 4px; }
+.activity-row:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.activity-row strong { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.activity-row span { color: var(--muted); font-size: 11px; }
+.activity-date { font-size: 10px; }
+
 /* Settings helper text */
 .settings-hint {
     margin: 6px 0 0;

@@ -30,6 +30,15 @@
             <button type="button" id="shareDisable" class="danger">Stop sharing</button>
         </div>
     </div>
+
+    <div class="share-divider"></div>
+    <p class="share-hint">People with access can edit this note.</p>
+    <form id="inviteForm" class="invite-form">
+        <input id="inviteEmail" type="email" placeholder="Email address" autocomplete="off" required>
+        <button type="submit" class="primary-btn">Invite</button>
+    </form>
+    <span id="inviteStatus" class="pw-status"></span>
+    <div id="collaboratorList" class="collaborator-list"></div>
 </div>
 
 <!-- Popover: wiki-link suggestions while typing [[ -->

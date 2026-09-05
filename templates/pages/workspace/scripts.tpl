@@ -8,6 +8,7 @@
 *}
 <script>window.MEMOIR = {
     csrf: document.querySelector('meta[name="csrf-token"]').content,
+    userRole: document.querySelector('meta[name="user-role"]').content,
     initialNotes: {$clientNotes|json nofilter},
     initialActiveComplete: {$initialActiveComplete|json nofilter},
     initialContentComplete: {$initialContentComplete|json nofilter}
