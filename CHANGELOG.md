@@ -5,6 +5,17 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.9] - 2026-09-05
+
+### Fixed
+
+- The collaborator list in a note's Share popover was unreadable: its
+  buttons inherited the popover's generic "full-width menu item" style,
+  which stretched the remove/resend buttons to fill the row and squeezed
+  the collaborator's email out of view, leaving what looked like a bare
+  hover-highlighted bar. Rows now have their own compact, scoped layout,
+  plus a clearer "Invited" status pill for pending invites.
+
 ## [2.0.8] - 2026-09-05
 
 ### Fixed
@@ -362,7 +373,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.8...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.9...HEAD
+[2.0.9]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.9
 [2.0.8]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.8
 [2.0.71]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.71
 [2.0.7]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.7

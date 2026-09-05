@@ -2367,10 +2367,13 @@
   }
 
   function collaboratorRowHtml(c) {
-    const label = c.status === 'pending' ? `${escapeHtml(c.invited_email)} <em>(invited)</em>` : escapeHtml(c.user_name || c.invited_email);
-    const resend = c.status === 'pending' ? `<button type="button" data-resend="${c.id}" title="Resend invite"><i class="fa-solid fa-rotate"></i></button>` : '';
+    const pending = c.status === 'pending';
+    const label = escapeHtml(pending ? c.invited_email : (c.user_name || c.invited_email));
+    const status = pending ? '<span class="collaborator-status">Invited</span>' : '';
+    const resend = pending ? `<button type="button" data-resend="${c.id}" title="Resend invite"><i class="fa-solid fa-rotate"></i></button>` : '';
     return `<div class="collaborator-row" data-collaborator="${c.id}">
-      <span>${label}</span>
+      <span class="collaborator-name" title="${label}">${label}</span>
+      ${status}
       ${resend}
       <button type="button" class="danger" data-remove="${c.id}" title="Remove access"><i class="fa-regular fa-trash-can"></i></button>
     </div>`;
