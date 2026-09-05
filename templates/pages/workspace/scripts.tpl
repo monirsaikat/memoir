@@ -14,6 +14,7 @@
     initialContentComplete: {$initialContentComplete|json nofilter}
 };</script>
 <script src="{'assets/js/app.js'|asset}"></script>
+<script src="{'assets/js/ui.js'|asset}"></script>
 <script>
 {literal}
 // Syntax highlighting is useful, but it must not hold the whole application

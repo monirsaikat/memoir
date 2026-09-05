@@ -27,6 +27,8 @@
 
             <div class="settings-pane">
                 <section class="settings-panel" data-panel="appearance">
+                    <h2 class="settings-page-title">Make yourself at home.</h2>
+                    <p class="settings-page-description">Choose a look that feels right for your workspace.</p>
                     <h4>Theme</h4>
                     <div class="theme-cards" id="themeToggle" role="radiogroup" aria-label="Theme">
                         {foreach $themes as $theme}
@@ -219,7 +221,7 @@
         </div>
 
         <div class="modal-actions">
-            <button data-close>Cancel</button>
+            <button data-close>Close</button>
             <button class="primary-btn" id="saveSettings">Save settings</button>
         </div>
     </div>

@@ -5,7 +5,7 @@
     precomputed `_preview` (see index.php).
 *}
     <!-- Middle panel: searchable note list -->
-    <section class="note-list-panel">
+    <section class="note-list-panel" aria-label="Notes">
         <div class="list-head">
             <div>
                 <h1 id="listTitle">All notes</h1>
@@ -21,7 +21,7 @@
                 <button id="selectModeBtn" class="icon-btn" type="button" title="Select notes">
                     <i class="fa-solid fa-check-double"></i>
                 </button>
-                <button id="collapseSidebar" class="icon-btn mobile-only" type="button" aria-label="Open navigation">
+                <button id="collapseSidebar" class="icon-btn navigation-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
                     <i class="fa-solid fa-bars"></i>
                 </button>
             </div>
@@ -74,6 +74,7 @@
         </div>
         <div class="active-search-filters hidden" id="activeSearchFilters"></div>
 
+        <div class="list-section-label"><span>Your notes</span><span>Updated</span></div>
         <div id="noteList" class="note-list">
             {if !$notes}
             <div class="list-empty">
@@ -85,12 +86,12 @@
 
             {foreach $notes as $note}
             <button class="note-card" data-id="{$note.id}" data-folder="{$note.folder_id|default:''}" data-pinned="{$note.is_pinned}">
-                <div class="note-card-top">
-                    <i class="fa-solid {$note.icon}" style="color:{if $note.color === '#FFFFFF'}#6f5ee8{else}{$note.color}{/if}"></i>
-                    {if $note.is_pinned}<i class="fa-solid fa-thumbtack pin-mini"></i>{/if}
+                <div class="note-card-heading">
+                    <span class="note-glyph"><i class="fa-solid {$note.icon}" style="color:{if $note.color === '#FFFFFF'}#6f5ee8{else}{$note.color}{/if}"></i></span>
+                    <strong>{$note.title}</strong>
+                    {if $note.is_pinned}<i class="fa-solid fa-thumbtack pin-mini" aria-label="Pinned"></i>{/if}
                 </div>
-                <strong>{$note.title}</strong>
-                <p>{$note._preview}</p>
+                <p>{if $note._preview}{$note._preview}{else}<span class="note-preview-empty">No content yet</span>{/if}</p>
                 <div class="note-meta">
                     <span>{$note.folder_name|default:'Unfiled'}{if ($note.tags|default:'') !== ''} · #{$note.tags|replace:',':' #'}{/if}</span>
                     <time>{$note.updated_at|date:'M j'}</time>

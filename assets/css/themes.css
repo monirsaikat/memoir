@@ -1,0 +1,204 @@
+/* Memoir color system. Theme selection changes surfaces, never layout.
+   Inter 4.1 is served locally; see assets/fonts/Inter-LICENSE.txt.
+   Original font files: https://rsms.me/inter/font-files/ */
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("../fonts/InterVariable.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: italic;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("../fonts/InterVariable-Italic.woff2") format("woff2");
+}
+
+:root {
+    --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --accent: #5366dd;
+    --hover: color-mix(in srgb, var(--ink) 5%, var(--panel));
+    --accent-soft: color-mix(in srgb, var(--accent) 9%, var(--panel));
+    --accent-ink: color-mix(in srgb, var(--accent) 55%, #19202f);
+    --danger: #c73d4c;
+    --shadow: 0 16px 56px rgb(20 29 49 / 12%), 0 2px 8px rgb(20 29 49 / 5%);
+}
+
+:root,
+html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --panel2: #f3f4f6;
+    --sidebar-bg: #f4f5f7;
+    --ink: #242730;
+    --muted: #646b77;
+    --line: #e5e7ec;
+}
+
+html[data-theme="sepia"] {
+    color-scheme: light;
+    --bg: #f6f4ef;
+    --panel: #fdfcf9;
+    --panel2: #f1eee7;
+    --sidebar-bg: #f0ede6;
+    --ink: #34322e;
+    --muted: #6b675e;
+    --line: #e5e0d6;
+}
+
+html[data-theme="paper"] {
+    color-scheme: light;
+    --bg: #f7f7f3;
+    --panel: #fffffc;
+    --panel2: #f2f3ed;
+    --sidebar-bg: #f0f1ea;
+    --ink: #30332f;
+    --muted: #656a60;
+    --line: #e3e5da;
+}
+
+html[data-theme="soft"] {
+    color-scheme: light;
+    --bg: #f8f6f8;
+    --panel: #fefdfd;
+    --panel2: #f3eff3;
+    --sidebar-bg: #f2eff3;
+    --ink: #322e36;
+    --muted: #6b646f;
+    --line: #e8e2e9;
+}
+
+html[data-theme="linen"] {
+    color-scheme: light;
+    --bg: #f7f5f2;
+    --panel: #fefdfb;
+    --panel2: #f2efea;
+    --sidebar-bg: #f0ede8;
+    --ink: #34312d;
+    --muted: #6b655c;
+    --line: #e6e0d8;
+}
+
+/* A brighter semantic accent stays legible on every dark surface, including
+   when the user selects a custom accent. Buttons retain the chosen color. */
+html[data-mode="dark"] {
+    --hover: color-mix(in srgb, var(--ink) 7%, var(--panel));
+    --accent-soft: color-mix(in srgb, var(--accent) 17%, var(--panel));
+    --accent-ink: color-mix(in srgb, var(--accent) 48%, #ffffff);
+    --danger: #fb8a94;
+    --shadow: 0 20px 64px rgb(0 0 0 / 36%), 0 2px 8px rgb(0 0 0 / 18%);
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #17191d;
+    --panel: #1e2126;
+    --panel2: #262a30;
+    --sidebar-bg: #191c21;
+    --ink: #eceef2;
+    --muted: #a0a6b1;
+    --line: #30353e;
+}
+
+html[data-theme="ocean"] {
+    color-scheme: dark;
+    --bg: #172029;
+    --panel: #1d2833;
+    --panel2: #263440;
+    --sidebar-bg: #19232d;
+    --ink: #e8eef4;
+    --muted: #a1b0bf;
+    --line: #32414f;
+}
+
+html[data-theme="midnight"] {
+    color-scheme: dark;
+    --bg: #0c0e11;
+    --panel: #111419;
+    --panel2: #1b1f26;
+    --sidebar-bg: #0e1115;
+    --ink: #e9ebf0;
+    --muted: #a0a6b1;
+    --line: #272c35;
+}
+
+html[data-theme="forest"] {
+    color-scheme: dark;
+    --bg: #18221e;
+    --panel: #202c26;
+    --panel2: #29372f;
+    --sidebar-bg: #1b2620;
+    --ink: #e8f0e9;
+    --muted: #a5b6aa;
+    --line: #35463b;
+}
+
+html[data-theme="dusk"] {
+    color-scheme: dark;
+    --bg: #211e2a;
+    --panel: #292534;
+    --panel2: #34303f;
+    --sidebar-bg: #24202e;
+    --ink: #eeebf5;
+    --muted: #b0a8bd;
+    --line: #413a4f;
+}
+
+html[data-theme="aurora"] {
+    color-scheme: dark;
+    --bg: #142225;
+    --panel: #1b2c30;
+    --panel2: #25383d;
+    --sidebar-bg: #17262a;
+    --ink: #e7f0f0;
+    --muted: #9fb7b9;
+    --line: #30474d;
+}
+
+html[data-theme="nord"] {
+    color-scheme: dark;
+    --bg: #252c37;
+    --panel: #2c3542;
+    --panel2: #364150;
+    --sidebar-bg: #28313d;
+    --ink: #edf1f6;
+    --muted: #b3bfce;
+    --line: #424f60;
+}
+
+html[data-theme="velvet"] {
+    color-scheme: dark;
+    --bg: #241c26;
+    --panel: #2d2431;
+    --panel2: #3a2e3e;
+    --sidebar-bg: #281f2b;
+    --ink: #f2eaf2;
+    --muted: #baaabe;
+    --line: #48384d;
+}
+
+/* Settings thumbnails use the same surfaces as the live theme. These local
+   variables also make the two halves of the System preview independent. */
+.thumb-light { --preview-bg: #ffffff; --preview-side: #f4f5f7; --preview-line: #dde1e8; }
+.thumb-dark { --preview-bg: #1e2126; --preview-side: #191c21; --preview-line: #46505e; }
+.thumb-sepia { --preview-bg: #fdfcf9; --preview-side: #f0ede6; --preview-line: #d9d2c4; }
+.thumb-ocean { --preview-bg: #1d2833; --preview-side: #19232d; --preview-line: #4b647b; }
+.thumb-midnight { --preview-bg: #111419; --preview-side: #0e1115; --preview-line: #3e4756; }
+.thumb-forest { --preview-bg: #202c26; --preview-side: #1b2620; --preview-line: #4c6856; }
+.thumb-dusk { --preview-bg: #292534; --preview-side: #24202e; --preview-line: #665578; }
+.thumb-aurora { --preview-bg: #1b2c30; --preview-side: #17262a; --preview-line: #466d74; }
+.thumb-paper { --preview-bg: #fffffc; --preview-side: #f0f1ea; --preview-line: #d7dacb; }
+.thumb-nord { --preview-bg: #2c3542; --preview-side: #28313d; --preview-line: #617891; }
+.thumb-soft { --preview-bg: #fefdfd; --preview-side: #f2eff3; --preview-line: #e0d6e2; }
+.thumb-velvet { --preview-bg: #2d2431; --preview-side: #281f2b; --preview-line: #715476; }
+.thumb-linen { --preview-bg: #fefdfb; --preview-side: #f0ede8; --preview-line: #dcd3c8; }
+
+.theme-thumb:not(.thumb-system),
+.thumb-system .tt-half { background: var(--preview-bg); }
+.theme-thumb .tt-side { background: var(--preview-side); }
+.theme-thumb .tt-main span { background: var(--accent); opacity: .7; }
+.theme-thumb .tt-main span + span { background: var(--preview-line); opacity: 1; }

@@ -1,3 +1,4 @@
+@layer legacy {
 /* ==========================================================================
    Memoir — application stylesheet
    Layout: sidebar | note list | editor (three-column grid)
@@ -1184,7 +1185,7 @@ button { cursor: pointer; }
 
 .primary-btn {
     border: 0 !important;
-    background: #242620 !important;
+    background: var(--accent) !important;
     color: #fff !important;
     font-weight: 700 !important;
 }
@@ -3256,3 +3257,5 @@ html[data-mode="dark"] #shareNote.active {
     font-size: 11px;
     line-height: 1.45;
 }
+
+} /* legacy component defaults; refreshed by workspace.css */

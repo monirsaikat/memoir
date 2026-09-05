@@ -51,7 +51,7 @@ $accentColors = ['#6F5EE8', '#4E9A7C', '#E7A93D', '#D66666', '#4A86C5', '#A866B7
 $noteBackgrounds = NOTE_BACKGROUNDS;
 
 // Presentation data for the settings dialog (templates cannot call PHP).
-$themeAccents = ['#6F5EE8', '#3F7FC2', '#2E9E8F', '#3D8F68', '#C98A2D', '#D65C7E', '#C75454', '#64748B'];
+$themeAccents = ['#5366DD', '#6F5EE8', '#3F7FC2', '#2E9E8F', '#3D8F68', '#C98A2D', '#D65C7E', '#C75454', '#64748B'];
 $themes = [
     ['id' => 'light', 'icon' => 'fa-sun', 'label' => 'Light'],
     ['id' => 'dark', 'icon' => 'fa-moon', 'label' => 'Dark'],

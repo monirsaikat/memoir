@@ -18,7 +18,8 @@ SSH, or VPS required.
 - Wiki-style internal links, backlinks, and unlinked-title mentions
 - Automatic/on-demand workspace backups with validated one-click restore
 - Daily update checks with verified, backup-first one-click installation
-- Responsive, distraction-free interface
+- Responsive writing workspace with tablet/mobile navigation and focus mode
+- Thirteen color themes, customizable accents, and locally hosted Inter fonts
 - Browser-based installer built for cPanel/shared hosting
 - Optional SMTP settings
 - Installer lock, CSRF protection, upload restrictions, and stored-HTML sanitizing

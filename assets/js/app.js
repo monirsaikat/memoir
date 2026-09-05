@@ -184,7 +184,9 @@
     $('#editorView').classList.remove('hidden');
 
     $('#noteTitle').value = current.title || '';
+    requestAnimationFrame(resizeTitle);
     $('#noteContent').innerHTML = current.content || '';
+    $('.editor-body').scrollTop = 0;
     $('#crumbFolder').textContent = current.folder_name || 'Unfiled';
 
     $('#updatedAt').textContent =
@@ -270,7 +272,7 @@
     d.note._content_cached = true;
     d.note._server_fresh = true;
     noteCache.set(key, d.note);
-    if (requestSequence !== noteRequestSequence || String(current?.id) !== key) return;
+    if (requestSequence !== noteRequestSequence) return;
     renderNote(d.note, referenceCache.get(key) || {}, push);
     refreshReferences(key, requestSequence, 0);
   }
@@ -403,8 +405,8 @@
         ? { text: n._preview, leading: false }
         : previewSnippet(n.content, q);
       return `<button class="note-card ${current && current.id == n.id ? 'active' : ''}${typeof selectedIds !== 'undefined' && selectedIds.has(String(n.id)) ? ' selected' : ''}" data-id="${n.id}" data-folder="${n.folder_id ?? ''}" data-pinned="${n.is_pinned}">
-    <div class="note-card-top"><i class="fa-solid ${escapeHtml(n.icon)}" style="color:${escapeHtml(!n.color || n.color.toUpperCase() === '#FFFFFF' ? '#6F5EE8' : n.color)}"></i>${n.is_pinned == 1 ? '<i class="fa-solid fa-thumbtack pin-mini"></i>' : ''}</div>
-    <strong>${markMatches(n.title, q)}</strong><p>${snip.leading ? '…' : ''}${markMatches(snip.text, q)}</p>
+    <div class="note-card-heading"><span class="note-glyph"><i class="fa-solid ${escapeHtml(n.icon)}" style="color:${escapeHtml(!n.color || n.color.toUpperCase() === '#FFFFFF' ? '#6F5EE8' : n.color)}"></i></span><strong>${markMatches(n.title, q)}</strong>${n.is_pinned == 1 ? '<i class="fa-solid fa-thumbtack pin-mini" aria-label="Pinned"></i>' : ''}</div>
+    <p>${snip.text ? (snip.leading ? '…' : '') + markMatches(snip.text, q) : '<span class="note-preview-empty">No content yet</span>'}</p>
     <div class="note-meta"><span>${escapeHtml(n.folder_name || 'Unfiled')}${n.tags ? ' · #' + escapeHtml(n.tags).split(',').join(' #') : ''}</span><time>${fmtDate(n.updated_at)}</time></div></button>`;
     }).join('');
   }
@@ -590,7 +592,23 @@
     }
   };
 
-  $('#noteTitle').addEventListener('input', queueSave);
+  function resizeTitle() {
+    const title = $('#noteTitle');
+    if (!title.clientWidth) return;
+    title.style.height = 'auto';
+    title.style.height = `${title.scrollHeight + 1}px`;
+  }
+  $('#noteTitle').addEventListener('input', () => {
+    resizeTitle();
+    queueSave();
+  });
+  $('#noteTitle').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.isComposing) {
+      e.preventDefault();
+      $('#noteContent').focus();
+    }
+  });
+  new ResizeObserver(resizeTitle).observe($('.document-heading'));
   $('#noteContent').addEventListener('input', () => {
     handleInlineShortcut();
     updateWikiMenu();
@@ -2860,7 +2878,7 @@
   });
 
   (() => {
-    let saved = '#6F5EE8';
+    let saved = '#5366DD';
     try {
       saved = localStorage.getItem(ACCENT_KEY) || saved;
     } catch {}

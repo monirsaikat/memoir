@@ -12,8 +12,11 @@
                 <i class="fa-solid fa-angles-right"></i>
             </button>
             <div class="empty-icon"><i class="fa-regular fa-pen-to-square"></i></div>
-            <h2>Choose a note</h2>
-            <p>Select a note from the list or create a new one.</p>
+            <span class="empty-eyebrow">A little space for your ideas</span>
+            <h2>Make room for a thought.</h2>
+            <p>Pick up where you left off, or start with a blank page. This space is yours.</p>
+            <button class="empty-create" id="createFirstNote" type="button"><i class="fa-solid fa-plus"></i> Create a note</button>
+            <span class="empty-shortcut">Find a note with <kbd>Ctrl K</kbd></span>
         </div>
 
         <div id="editorView" class="editor-view hidden">
@@ -33,30 +36,39 @@
                 <div class="crumb">
                     <button type="button" class="crumb-btn" id="crumbFolder" title="Move to folder">Unfiled</button>
                     <i class="fa-solid fa-chevron-right"></i>
-                    <span id="saveStatus">Saved</span>
+                    <span id="saveStatus" role="status" aria-live="polite">Saved</span>
                 </div>
                 <div class="editor-actions">
-                    <button class="icon-btn" id="shareNote" title="Share note" aria-label="Share note"><i class="fa-solid fa-share-nodes"></i></button>
-                    <button class="icon-btn" id="historyNote" title="Version history" aria-label="Version history"><i class="fa-solid fa-clock-rotate-left"></i></button>
-                    <button class="icon-btn" id="activityNote" title="Activity" aria-label="Note activity"><i class="fa-solid fa-list-check"></i></button>
+                    <button class="icon-btn share-note-btn" id="shareNote" title="Share note" aria-label="Share note"><i class="fa-solid fa-arrow-up-from-bracket"></i><span>Share</span></button>
                     <button class="icon-btn" id="pinNote" title="Pin" aria-label="Pin note"><i class="fa-solid fa-thumbtack"></i></button>
-                    <button class="icon-btn" id="noteStyle" title="Note style" aria-label="Note style"><i class="fa-solid fa-palette"></i></button>
-                    <button class="icon-btn danger" id="deleteNote" title="Delete" aria-label="Delete note"><i class="fa-regular fa-trash-can"></i></button>
+                    <details class="note-options">
+                        <summary class="icon-btn" aria-label="More note actions" title="More note actions"><i class="fa-solid fa-ellipsis"></i></summary>
+                        <div class="note-options-menu">
+                            <span class="menu-caption">This note</span>
+                            <button type="button" id="historyNote"><i class="fa-solid fa-clock-rotate-left"></i> Version history</button>
+                            <button type="button" id="activityNote"><i class="fa-solid fa-list-check"></i> Activity</button>
+                            <button type="button" id="noteStyle"><i class="fa-solid fa-palette"></i> Appearance</button>
+                            <button type="button" class="danger" id="deleteNote"><i class="fa-regular fa-trash-can"></i> Move to trash</button>
+                        </div>
+                    </details>
                 </div>
             </header>
 
             <div class="editor-body">
                 <div class="note-cover" id="noteCover"></div>
-                <input id="noteTitle" class="title-input" value="" placeholder="Untitled note">
+                <div class="document-heading">
+                    <span class="document-eyebrow"><i class="fa-regular fa-file-lines"></i> NOTE</span>
+                    <textarea id="noteTitle" class="title-input" rows="1" placeholder="Untitled note" aria-label="Note title"></textarea>
+                </div>
 
                 <div class="tag-row">
                     <i class="fa-solid fa-tag"></i>
                     <div class="tag-chips" id="tagChips"></div>
-                    <input id="tagInput" placeholder="Add tag" maxlength="30" autocomplete="off">
+                    <input id="tagInput" placeholder="Add a tag…" aria-label="Add a tag" maxlength="30" autocomplete="off">
                 </div>
 
                 <div class="toolbar-wrap">
-                    <div class="toolbar">
+                    <div class="toolbar" role="toolbar" aria-label="Text formatting">
                         <div class="tool-group">
                             <button type="button" data-cmd="undo" title="Undo (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
                             <button type="button" data-cmd="redo" title="Redo (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i></button>
@@ -120,7 +132,7 @@
                     </div>
                 </div>
 
-                <div id="noteContent" class="rich-editor" contenteditable="true" spellcheck="true"></div>
+                <div id="noteContent" class="rich-editor" contenteditable="true" spellcheck="true" role="textbox" aria-label="Note content" aria-multiline="true"></div>
 
                 <div class="references hidden" id="backlinks">
                     <section class="reference-group hidden" id="linkedReferences">

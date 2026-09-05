@@ -10,25 +10,32 @@
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir {$version}</span>
-                <h3 id="whatsNewTitle">Cover images for notes</h3>
+                <h3 id="whatsNewTitle">A fresh space for your ideas</h3>
             </div>
         </div>
 
-        <p class="release-copy">Memoir 2.0.10 lets you give a note an illustrated cover image, right from the appearance menu.</p>
+        <p class="release-copy">Memoir 2.1.0 brings a redesigned workspace with clearer navigation, comfortable typography, and a calmer writing experience.</p>
 
         <ul class="release-list">
             <li>
-                <i class="fa-solid fa-image"></i>
+                <i class="fa-solid fa-palette"></i>
                 <div>
-                    <strong>Eight cover images</strong>
-                    <span>Mountains, Ocean, Meadow, Night Sky, Sunset, Forest, Terminal, and Bubbles — pick one from Note appearance to add a banner to the top of a note.</span>
+                    <strong>Your workspace, refined</strong>
+                    <span>Compact note rows, 13 refreshed themes, and locally hosted Inter fonts. Your existing theme and accent choices stay with you.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-clock-rotate-left"></i>
+                <i class="fa-solid fa-pen-to-square"></i>
                 <div>
-                    <strong>Tracked in history</strong>
-                    <span>Changing or removing a cover creates a version snapshot, same as editing the title or content.</span>
+                    <strong>More room to write</strong>
+                    <span>Long titles wrap naturally, the document scrolls independently, and secondary note actions are neatly grouped in the More menu.</span>
+                </div>
+            </li>
+            <li>
+                <i class="fa-solid fa-mobile-screen"></i>
+                <div>
+                    <strong>Better on every screen</strong>
+                    <span>Tablet and phone navigation, reliable dialog placement, and improved keyboard focus make your notes easier to reach.</span>
                 </div>
             </li>
         </ul>

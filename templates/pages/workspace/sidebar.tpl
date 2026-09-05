@@ -6,17 +6,17 @@
     <!-- Sidebar: brand, navigation, folders, settings -->
     <aside class="sidebar">
         <div class="brand">
-            <img class="brand-logo" src="assets/img/memoir-logo.png" alt="">
-            <span>{$appName}</span>
-            <button class="icon-btn mobile-only sidebar-close" id="closeSidebar" type="button" aria-label="Close navigation">
+            <span class="brand-mark" aria-hidden="true"><i class="fa-solid fa-book-open"></i></span>
+            <span class="brand-name">{$appName}<small>Your personal workspace</small></span>
+            <button class="icon-btn navigation-close sidebar-close" id="closeSidebar" type="button" aria-label="Close navigation">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <button class="new-note-btn" id="newNote"><i class="fa-solid fa-plus"></i> New note</button>
+        <button class="new-note-btn" id="newNote"><i class="fa-solid fa-plus"></i><span>New note</span><kbd>N</kbd></button>
 
         <div class="sidebar-scroll">
-        <nav class="main-nav">
+        <nav class="main-nav" aria-label="Workspace">
             <button class="nav-item active" data-folder="">
                 <i class="fa-regular fa-note-sticky"></i>
                 <span>All notes</span>
@@ -65,7 +65,7 @@
 
         <div class="sidebar-bottom">
             <button id="whatsNewBtn">
-                <i class="fa-solid fa-sparkles"></i> What’s new
+                <i class="fa-regular fa-circle-question"></i> What’s new
                 <span class="version-pill">v{$version}</span>
             </button>
             <button id="settingsBtn"><i class="fa-solid fa-sliders"></i> Settings</button>

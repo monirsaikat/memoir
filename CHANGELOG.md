@@ -5,6 +5,35 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-05
+
+### Changed
+
+- Redesigned the workspace with compact note rows, a centered writing area,
+  quieter navigation, and consistent menus, settings, and sign-in styling.
+- Refreshed all 13 color themes while preserving saved theme and accent choices.
+- Serve Inter variable fonts locally, including their open-source license,
+  instead of requesting typography from Google Fonts.
+- Use a navigation drawer on tablets and phones and let long note titles wrap
+  naturally. The document scrolls independently of its header and footer.
+- Group secondary note actions in a More menu and add a create-note action to
+  the empty editor state.
+
+### Fixed
+
+- Removed the oversized focus box around the note title.
+- Fixed menu positioning and settings dialogs appearing behind mobile navigation.
+- Improved keyboard focus trapping and restoration for dialogs, drawer access,
+  icon-button labels, and platform-specific shortcut hints.
+- Keep note-row styling consistent after searching or refreshing the list.
+- Open uncached notes correctly when switching from another note, and reset
+  document scrolling when opening a note.
+
+### Upgrade notes
+
+- No database migration or new server dependency is required. Existing notes,
+  folders, cover images, and user preferences are preserved.
+
 ## [2.0.10] - 2026-09-05
 
 ### Added
@@ -383,7 +412,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.10...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/monirsaikat/memoir/releases/tag/v2.1.0
 [2.0.10]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.10
 [2.0.9]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.9
 [2.0.8]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.8
