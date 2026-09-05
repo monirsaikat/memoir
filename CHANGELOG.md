@@ -5,6 +5,21 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-09-05
+
+### Added
+
+- Two premium themes: **Velvet**, a dark plum workspace with a fine
+  grain-and-gold-fleck texture, and **Linen**, a warm ivory workspace with
+  a subtle woven-fabric texture. Both use tileable SVG textures (no photo
+  assets) layered under the sidebar, note list, editor, and sign-in pages.
+
+### Fixed
+
+- The Nord and Soft themes had full styling but were missing from the
+  Settings theme picker, so they could never actually be selected. Both
+  now appear alongside the rest.
+
 ## [2.0.4] - 2026-09-05
 
 ### Fixed
@@ -308,7 +323,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.4...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.5...HEAD
+[2.0.5]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.5
 [2.0.4]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.4
 [2.0.3]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.3
 [2.0.2]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.2

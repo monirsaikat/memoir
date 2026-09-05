@@ -62,6 +62,10 @@ $themes = [
     ['id' => 'dusk', 'icon' => 'fa-cloud-moon', 'label' => 'Dusk'],
     ['id' => 'aurora', 'icon' => 'fa-wand-magic-sparkles', 'label' => 'Aurora'],
     ['id' => 'paper', 'icon' => 'fa-file-lines', 'label' => 'Paper'],
+    ['id' => 'nord', 'icon' => 'fa-snowflake', 'label' => 'Nord'],
+    ['id' => 'soft', 'icon' => 'fa-cloud-sun', 'label' => 'Soft'],
+    ['id' => 'velvet', 'icon' => 'fa-crown', 'label' => 'Velvet', 'premium' => true],
+    ['id' => 'linen', 'icon' => 'fa-scroll', 'label' => 'Linen', 'premium' => true],
 ];
 $backupIntervals = [];
 foreach ([1, 6, 12, 24, 72, 168] as $hours) {

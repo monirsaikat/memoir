@@ -10,32 +10,32 @@
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir {$version}</span>
-                <h3 id="whatsNewTitle">Share a note, see who did what</h3>
+                <h3 id="whatsNewTitle">Two new premium themes</h3>
             </div>
         </div>
 
-        <p class="release-copy">Memoir 2.0.3 adds collaborators and an activity log, so you can invite someone to edit a note and keep track of changes.</p>
+        <p class="release-copy">Memoir 2.0.5 adds Velvet and Linen, two textured premium themes, and fixes Nord and Soft so they finally show up in the theme picker.</p>
 
         <ul class="release-list">
             <li>
-                <i class="fa-solid fa-user-plus"></i>
+                <i class="fa-solid fa-crown"></i>
                 <div>
-                    <strong>Invite collaborators</strong>
-                    <span>Share a note with someone by email. They accept via a secure link and can edit that note right away.</span>
+                    <strong>Velvet</strong>
+                    <span>A dark plum workspace with a fine grain-and-gold-fleck texture across the sidebar, notes, and editor.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-clock-rotate-left"></i>
+                <i class="fa-solid fa-scroll"></i>
                 <div>
-                    <strong>Activity log</strong>
-                    <span>Every note tracks who edited, shared, trashed, or restored it. Owners get a workspace-wide activity view in Settings.</span>
+                    <strong>Linen</strong>
+                    <span>A warm ivory workspace with a subtle woven-fabric texture — soft, quiet, and easy on the eyes.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-lock"></i>
+                <i class="fa-solid fa-snowflake"></i>
                 <div>
-                    <strong>Scoped access</strong>
-                    <span>Collaborators only ever see the notes shared with them — folders, settings, and backups stay with the workspace owner.</span>
+                    <strong>Nord &amp; Soft are back</strong>
+                    <span>Both themes were fully styled but missing from the theme picker — they're now selectable in Settings → Appearance.</span>
                 </div>
             </li>
         </ul>

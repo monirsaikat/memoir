@@ -31,6 +31,7 @@
                     <div class="theme-cards" id="themeToggle" role="radiogroup" aria-label="Theme">
                         {foreach $themes as $theme}
                         <button type="button" data-theme-opt="{$theme.id}">
+                            {if !empty($theme.premium)}<span class="theme-premium-badge">Premium</span>{/if}
                             {if $theme.id === 'system'}
                             <span class="theme-thumb thumb-system">
                                 <span class="tt-half thumb-light"><span class="tt-side"></span><span class="tt-main"><span></span><span></span></span></span>

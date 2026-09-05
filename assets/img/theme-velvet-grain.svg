@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320">
+  <!--
+    Seamless-ish tileable texture for the Velvet theme: a fine dark grain
+    plus a scattering of tiny gold sparkle flecks, both built from SVG
+    turbulence so no raster/photo asset is needed. Referenced as a tiling
+    background-image, layered under the theme's solid panel colors.
+  -->
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" seed="3" result="fineNoise"/>
+    <feColorMatrix in="fineNoise" type="matrix"
+      values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.33 0.33 0.33 0 0" result="fineAlpha"/>
+    <feComponentTransfer in="fineAlpha" result="fineGrain">
+      <feFuncA type="linear" slope="0.05" intercept="0"/>
+    </feComponentTransfer>
+    <feFlood flood-color="#0c0510" result="fineTint"/>
+    <feComposite in="fineTint" in2="fineGrain" operator="in" result="fineLayer"/>
+
+    <feTurbulence type="fractalNoise" baseFrequency="0.12" numOctaves="2" stitchTiles="stitch" seed="7" result="sparkleNoise"/>
+    <feColorMatrix in="sparkleNoise" type="matrix"
+      values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.33 0.33 0.33 0 0" result="sparkleAlpha"/>
+    <feComponentTransfer in="sparkleAlpha" result="sparkleMask">
+      <feFuncA type="gamma" amplitude="1" exponent="9" offset="0"/>
+    </feComponentTransfer>
+    <feFlood flood-color="#d8b878" result="sparkleTint"/>
+    <feComposite in="sparkleTint" in2="sparkleMask" operator="in" result="sparkleLayer"/>
+
+    <feMerge>
+      <feMergeNode in="fineLayer"/>
+      <feMergeNode in="sparkleLayer"/>
+    </feMerge>
+  </filter>
+  <rect width="100%" height="100%" filter="url(#grain)"/>
+</svg>

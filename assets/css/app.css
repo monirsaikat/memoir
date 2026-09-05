@@ -1309,6 +1309,7 @@ button { cursor: pointer; }
     margin: 10px 0 4px;
 }
 .theme-cards button {
+    position: relative;
     border: 0;
     background: transparent;
     padding: 0;
@@ -1316,6 +1317,20 @@ button { cursor: pointer; }
     flex-direction: column;
     align-items: center;
     gap: 9px;
+}
+.theme-premium-badge {
+    position: absolute;
+    top: -6px;
+    right: 2px;
+    z-index: 1;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: #3a2a06;
+    background: linear-gradient(120deg, #f3d38a, #d8b878);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .18);
 }
 .theme-name {
     font-size: 12px;
@@ -2345,6 +2360,107 @@ html[data-theme="soft"] .auth-page { background: radial-gradient(circle at 50% -
 html[data-theme="soft"] .auth-card { background: #fff; border-color: #dfdcd3; }
 html[data-theme="soft"] .auth-card input { background: #fffbf7; border-color: #e8e5dd; }
 
+/* Velvet: premium dark plum theme with a fine grain + gold-fleck texture
+   (dark base). The texture is a tiling SVG (no photo asset), layered under
+   each panel's solid color so text stays fully readable. */
+html[data-theme="velvet"] {
+    --bg: #17101c;
+    --panel: #221729;
+    --panel2: #1c1220;
+    --ink: #f3e9f5;
+    --muted: #ab93b5;
+    --line: #3a2743;
+}
+html[data-theme="velvet"] body { background: url('../img/theme-velvet-grain.svg') repeat, var(--bg); }
+html[data-theme="velvet"] .sidebar { background: url('../img/theme-velvet-grain.svg') repeat, #150c17; border-right-color: #3a2743; }
+html[data-theme="velvet"] .sidebar-bottom { border-top-color: #3a2743; }
+html[data-theme="velvet"] .note-list-panel { background: url('../img/theme-velvet-grain.svg') repeat, #1a1120; }
+html[data-theme="velvet"] .search-wrap input { background: #221729; border-color: #3a2743; }
+html[data-theme="velvet"] .search-wrap kbd { background: #2c1d34; border-color: #4a3355; color: #ab93b5; }
+html[data-theme="velvet"] .note-card { background: #241a2b; border-color: #3a2743; }
+html[data-theme="velvet"] .note-card:hover,
+html[data-theme="velvet"] .note-card.active { background: #2c1e34; border-color: #5a3f68; }
+html[data-theme="velvet"] .editor-panel { background: url('../img/theme-velvet-grain.svg') repeat, #221729; }
+html[data-theme="velvet"] .editor-head,
+html[data-theme="velvet"] .toolbar,
+html[data-theme="velvet"] .editor-foot { border-color: #3a2743; }
+html[data-theme="velvet"] .icon-btn { background: #2c1d34; border-color: #3a2743; }
+html[data-theme="velvet"] .icon-btn:hover { background: #35223e; }
+html[data-theme="velvet"] .rich-editor pre { background: #150c17; border-color: #3a2743; }
+html[data-theme="velvet"] .rich-editor code { background: #2c1d34; }
+html[data-theme="velvet"] .rich-editor table,
+html[data-theme="velvet"] .rich-editor th,
+html[data-theme="velvet"] .rich-editor td { border-color: #3a2743; }
+html[data-theme="velvet"] .rich-editor th { background: #2c1d34; }
+html[data-theme="velvet"] .rich-editor ul.checklist li:before { background: #221729; border-color: #6a4c78; }
+html[data-theme="velvet"] .modal,
+html[data-theme="velvet"] .color-sheet,
+html[data-theme="velvet"] .heading-sheet { background: #241a2b; border-color: #4a3355; }
+html[data-theme="velvet"] .modal input,
+html[data-theme="velvet"] .modal select { background: #150c17; border-color: #3a2743; }
+html[data-theme="velvet"] .modal-actions button { background: #2c1d34; border-color: #4a3355; }
+html[data-theme="velvet"] .icon-grid button { background: #150c17; border-color: #3a2743; }
+html[data-theme="velvet"] .swatch-clear { background: #2c1d34; border-color: #4a3355; color: #ab93b5; }
+html[data-theme="velvet"] .settings-nav { background: #150c17; }
+html[data-theme="velvet"] .format-bubble,
+html[data-theme="velvet"] .table-menu { background: #35223e; }
+html[data-theme="velvet"] .rich-editor,
+html[data-theme="velvet"] .note-list { scrollbar-color: #5a3f68 transparent; }
+html[data-theme="velvet"] .rich-editor::-webkit-scrollbar-thumb,
+html[data-theme="velvet"] .note-list::-webkit-scrollbar-thumb { background: #5a3f68; }
+html[data-theme="velvet"] .auth-page { background: url('../img/theme-velvet-grain.svg') repeat, radial-gradient(circle at 50% -10%, #2c1d34 0, transparent 36rem), var(--bg); }
+html[data-theme="velvet"] .auth-card { background: #1c1220; border-color: #3a2743; }
+html[data-theme="velvet"] .auth-card input { background: #150c17; border-color: #3a2743; }
+
+/* Linen: premium warm light theme with a fine woven-fabric grain texture
+   (light base). Same tiling-SVG technique as Velvet, tuned warm and subtle. */
+html[data-theme="linen"] {
+    --bg: #ede4d3;
+    --panel: #fbf6ec;
+    --panel2: #f5ecdb;
+    --ink: #362a1f;
+    --muted: #8a7a63;
+    --line: #ddccac;
+}
+html[data-theme="linen"] body { background: url('../img/theme-linen-grain.svg') repeat, var(--bg); }
+html[data-theme="linen"] .sidebar { background: url('../img/theme-linen-grain.svg') repeat, #e7dcc5; border-right-color: #ddccac; }
+html[data-theme="linen"] .sidebar-bottom { border-top-color: #ddccac; }
+html[data-theme="linen"] .note-list-panel { background: url('../img/theme-linen-grain.svg') repeat, #f5ecdb; }
+html[data-theme="linen"] .search-wrap input { background: #fbf6ec; border-color: #ddccac; }
+html[data-theme="linen"] .search-wrap kbd { background: #efe4cd; border-color: #ddccac; color: #8a7a63; }
+html[data-theme="linen"] .note-card { background: #fbf6ec; border-color: #e2d5b8; }
+html[data-theme="linen"] .note-card:hover,
+html[data-theme="linen"] .note-card.active { background: #fffcf5; border-color: #cbb98f; }
+html[data-theme="linen"] .editor-panel { background: url('../img/theme-linen-grain.svg') repeat, #fbf6ec; }
+html[data-theme="linen"] .editor-head,
+html[data-theme="linen"] .toolbar,
+html[data-theme="linen"] .editor-foot { border-color: #ddccac; }
+html[data-theme="linen"] .icon-btn { background: #fbf6ec; border-color: #ddccac; }
+html[data-theme="linen"] .icon-btn:hover { background: #f5ecdb; }
+html[data-theme="linen"] .rich-editor pre { background: #efe4cd; border-color: #ddccac; }
+html[data-theme="linen"] .rich-editor code { background: #efe4cd; }
+html[data-theme="linen"] .rich-editor table,
+html[data-theme="linen"] .rich-editor th,
+html[data-theme="linen"] .rich-editor td { border-color: #ddccac; }
+html[data-theme="linen"] .rich-editor th { background: #f5ecdb; }
+html[data-theme="linen"] .rich-editor ul.checklist li:before { background: #fbf6ec; border-color: #c9b98f; }
+html[data-theme="linen"] .modal,
+html[data-theme="linen"] .color-sheet,
+html[data-theme="linen"] .heading-sheet { background: #fbf6ec; border-color: #ddccac; }
+html[data-theme="linen"] .modal input,
+html[data-theme="linen"] .modal select { background: #fffcf5; border-color: #ddccac; }
+html[data-theme="linen"] .modal-actions button { background: #f5ecdb; border-color: #ddccac; }
+html[data-theme="linen"] .icon-grid button { background: #fffcf5; border-color: #ddccac; }
+html[data-theme="linen"] .swatch-clear { background: #f5ecdb; border-color: #ddccac; color: #8a7a63; }
+html[data-theme="linen"] .settings-nav { background: #e7dcc5; }
+html[data-theme="linen"] .rich-editor,
+html[data-theme="linen"] .note-list { scrollbar-color: #cbb98f transparent; }
+html[data-theme="linen"] .rich-editor::-webkit-scrollbar-thumb,
+html[data-theme="linen"] .note-list::-webkit-scrollbar-thumb { background: #cbb98f; }
+html[data-theme="linen"] .auth-page { background: url('../img/theme-linen-grain.svg') repeat, radial-gradient(circle at 50% -10%, #fffcf5 0, transparent 36rem), var(--bg); }
+html[data-theme="linen"] .auth-card { background: #fbf6ec; border-color: #ddccac; }
+html[data-theme="linen"] .auth-card input { background: #fffcf5; border-color: #ddccac; }
+
 /* Flavor preview thumbs */
 .thumb-sepia { background: #efe6d1; }
 .thumb-sepia .tt-side { background: #ddcfad; }
@@ -2373,6 +2489,12 @@ html[data-theme="soft"] .auth-card input { background: #fffbf7; border-color: #e
 .thumb-soft { background: #faf8f4; }
 .thumb-soft .tt-side { background: #f3f1ec; }
 .thumb-soft .tt-main span + span { background: #e8e5dd; width: 90%; }
+.thumb-velvet { background: linear-gradient(155deg, #221729, #150c17); }
+.thumb-velvet .tt-side { background: #150c17; }
+.thumb-velvet .tt-main span + span { background: linear-gradient(90deg, #d8b878, #ab93b5); width: 90%; }
+.thumb-linen { background: linear-gradient(155deg, #fbf6ec, #ede4d3); }
+.thumb-linen .tt-side { background: #e7dcc5; }
+.thumb-linen .tt-main span + span { background: #ddccac; width: 90%; }
 
 /* ==========================================================================
    Bulk selection & modern accent pills

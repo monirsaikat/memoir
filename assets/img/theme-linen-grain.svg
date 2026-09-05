@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320">
+  <!--
+    Seamless-ish tileable texture for the Linen theme: a fine warm-taupe
+    crosshatch grain suggesting woven fabric, built from SVG turbulence
+    (no raster/photo asset needed). Referenced as a tiling background-image,
+    layered under the theme's solid panel colors.
+  -->
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.7 0.75" numOctaves="2" stitchTiles="stitch" seed="11" result="weave"/>
+    <feColorMatrix in="weave" type="matrix"
+      values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.33 0.33 0.33 0 0" result="weaveAlpha"/>
+    <feComponentTransfer in="weaveAlpha" result="weaveGrain">
+      <feFuncA type="linear" slope="0.06" intercept="0"/>
+    </feComponentTransfer>
+    <feFlood flood-color="#8a7350" result="weaveTint"/>
+    <feComposite in="weaveTint" in2="weaveGrain" operator="in"/>
+  </filter>
+  <rect width="100%" height="100%" filter="url(#grain)"/>
+</svg>
