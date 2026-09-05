@@ -46,6 +46,7 @@
             </header>
 
             <div class="editor-body">
+                <div class="note-cover" id="noteCover"></div>
                 <input id="noteTitle" class="title-input" value="" placeholder="Untitled note">
 
                 <div class="tag-row">

@@ -24,7 +24,7 @@
   let trashView = false;     // showing the trash instead of live notes
   let saveTimer = null;      // debounce timer for autosave
   let savePromise = null;    // active save, awaited before history opens
-  let draftStyle = { icon: 'fa-note-sticky', color: '#6F5EE8' };
+  let draftStyle = { icon: 'fa-note-sticky', color: '#6F5EE8', background: '' };
   let currentTags = [];      // tags of the open note
   let sortMode = 'updated';  // note list order: updated | created | title
   let lastSearchText = '';
@@ -172,8 +172,13 @@
 
     draftStyle = {
       icon: current.icon || 'fa-note-sticky',
-      color: current.color || '#6F5EE8'
+      color: current.color || '#6F5EE8',
+      background: current.background || ''
     };
+
+    const cover = $('#noteCover');
+    cover.classList.toggle('active', !!draftStyle.background);
+    cover.style.backgroundImage = draftStyle.background ? `url('assets/img/note-bg-${draftStyle.background}.svg')` : '';
 
     $('#emptyState').classList.add('hidden');
     $('#editorView').classList.remove('hidden');
@@ -435,6 +440,7 @@
       content: serializeContent(),
       icon: draftStyle.icon,
       color: draftStyle.color,
+      background: draftStyle.background,
       tags: currentTags,
       is_pinned: current.is_pinned,
     };
@@ -2605,6 +2611,18 @@
     draftStyle.color = btn.dataset.color;
     queueSave();
     $$('#noteColors button').forEach(x => x.classList.remove('selected'));
+    btn.classList.add('selected');
+  };
+
+  $('#noteBackgrounds').onclick = e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    draftStyle.background = btn.dataset.background;
+    const cover = $('#noteCover');
+    cover.classList.toggle('active', !!draftStyle.background);
+    cover.style.backgroundImage = draftStyle.background ? `url('assets/img/note-bg-${draftStyle.background}.svg')` : '';
+    queueSave();
+    $$('#noteBackgrounds button').forEach(x => x.classList.remove('selected'));
     btn.classList.add('selected');
   };
 

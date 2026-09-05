@@ -5,6 +5,16 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.10] - 2026-09-05
+
+### Added
+
+- Cover images for notes: eight illustrated backgrounds (Mountains,
+  Ocean, Meadow, Night Sky, Sunset, Forest, Terminal, Bubbles), picked
+  from the Note appearance modal alongside icon and accent color. The
+  chosen cover shows as a banner at the top of the note and is tracked
+  in version history like any other note property.
+
 ## [2.0.9] - 2026-09-05
 
 ### Fixed
@@ -373,7 +383,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.9...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.10...HEAD
+[2.0.10]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.10
 [2.0.9]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.9
 [2.0.8]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.8
 [2.0.71]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.71

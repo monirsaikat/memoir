@@ -106,8 +106,8 @@ case 'backup-restore':
 
         $noteIds = [];
         $insertNote = db()->prepare(
-            "INSERT INTO notes(id, folder_id, owner_id, title, content, color, tags, icon, is_pinned, deleted_at, share_token, created_at, updated_at)
-             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)"
+            "INSERT INTO notes(id, folder_id, owner_id, title, content, color, tags, icon, background, is_pinned, deleted_at, share_token, created_at, updated_at)
+             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)"
         );
         foreach ($payload['notes'] as $row) {
             if (!is_array($row)) continue;
@@ -120,18 +120,19 @@ case 'backup-restore':
             $content = sanitize_note_html((string) ($row['content'] ?? ''));
             $color = preg_match('/^#[A-Fa-f0-9]{6}$/', (string) ($row['color'] ?? '')) ? $row['color'] : '#6F5EE8';
             $icon = preg_match('/^fa-[a-z0-9-]+$/', (string) ($row['icon'] ?? '')) ? $row['icon'] : 'fa-note-sticky';
+            $background = sanitize_note_background($row['background'] ?? '');
             $tags = sanitize_tags(explode(',', (string) ($row['tags'] ?? '')));
             $deleted = valid_backup_datetime($row['deleted_at'] ?? null);
             $created = valid_backup_datetime($row['created_at'] ?? null) ?? date('Y-m-d H:i:s');
             $updated = valid_backup_datetime($row['updated_at'] ?? null) ?? $created;
             // Restored notes belong to whoever ran the restore — a backup carries
             // no ownership/collaborator data of its own.
-            $insertNote->execute([$id, $folderId, $user['id'], $title, $content, $color, $tags, $icon, !empty($row['is_pinned']) ? 1 : 0, $deleted, $created, $updated]);
+            $insertNote->execute([$id, $folderId, $user['id'], $title, $content, $color, $tags, $icon, $background, !empty($row['is_pinned']) ? 1 : 0, $deleted, $created, $updated]);
         }
 
         $insertVersion = db()->prepare(
-            "INSERT INTO note_versions(id, note_id, folder_id, title, content, color, tags, icon, is_pinned, source, snapshot_hash, created_at)
-             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO note_versions(id, note_id, folder_id, title, content, color, tags, icon, background, is_pinned, source, snapshot_hash, created_at)
+             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $versionIds = [];
         foreach ($payload['versions'] as $row) {
@@ -149,6 +150,7 @@ case 'backup-restore':
                 'color' => preg_match('/^#[A-Fa-f0-9]{6}$/', (string) ($row['color'] ?? '')) ? $row['color'] : '#6F5EE8',
                 'tags' => sanitize_tags(explode(',', (string) ($row['tags'] ?? ''))),
                 'icon' => preg_match('/^fa-[a-z0-9-]+$/', (string) ($row['icon'] ?? '')) ? $row['icon'] : 'fa-note-sticky',
+                'background' => sanitize_note_background($row['background'] ?? ''),
                 'is_pinned' => !empty($row['is_pinned']) ? 1 : 0,
             ];
             $source = in_array(($row['source'] ?? ''), ['autosave', 'restore', 'import'], true) ? $row['source'] : 'import';
@@ -157,7 +159,7 @@ case 'backup-restore':
                 ? $row['snapshot_hash'] : snapshot_hash($version);
             $insertVersion->execute([
                 $id, $noteId, $folderId, $version['title'], $version['content'], $version['color'],
-                $version['tags'], $version['icon'], $version['is_pinned'], $source, $hash, $created,
+                $version['tags'], $version['icon'], $version['background'], $version['is_pinned'], $source, $hash, $created,
             ]);
         }
 

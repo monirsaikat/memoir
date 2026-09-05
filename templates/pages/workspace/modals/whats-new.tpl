@@ -10,32 +10,25 @@
             <img src="assets/img/memoir-logo.png" alt="">
             <div>
                 <span class="release-label">Memoir {$version}</span>
-                <h3 id="whatsNewTitle">Two new premium themes</h3>
+                <h3 id="whatsNewTitle">Cover images for notes</h3>
             </div>
         </div>
 
-        <p class="release-copy">Memoir 2.0.5 adds Velvet and Linen, two textured premium themes, and fixes Nord and Soft so they finally show up in the theme picker.</p>
+        <p class="release-copy">Memoir 2.0.10 lets you give a note an illustrated cover image, right from the appearance menu.</p>
 
         <ul class="release-list">
             <li>
-                <i class="fa-solid fa-crown"></i>
+                <i class="fa-solid fa-image"></i>
                 <div>
-                    <strong>Velvet</strong>
-                    <span>A dark plum workspace with a fine grain-and-gold-fleck texture across the sidebar, notes, and editor.</span>
+                    <strong>Eight cover images</strong>
+                    <span>Mountains, Ocean, Meadow, Night Sky, Sunset, Forest, Terminal, and Bubbles — pick one from Note appearance to add a banner to the top of a note.</span>
                 </div>
             </li>
             <li>
-                <i class="fa-solid fa-scroll"></i>
+                <i class="fa-solid fa-clock-rotate-left"></i>
                 <div>
-                    <strong>Linen</strong>
-                    <span>A warm ivory workspace with a subtle woven-fabric texture — soft, quiet, and easy on the eyes.</span>
-                </div>
-            </li>
-            <li>
-                <i class="fa-solid fa-snowflake"></i>
-                <div>
-                    <strong>Nord &amp; Soft are back</strong>
-                    <span>Both themes were fully styled but missing from the theme picker — they're now selectable in Settings → Appearance.</span>
+                    <strong>Tracked in history</strong>
+                    <span>Changing or removing a cover creates a version snapshot, same as editing the title or content.</span>
                 </div>
             </li>
         </ul>

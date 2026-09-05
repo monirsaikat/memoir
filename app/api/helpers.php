@@ -36,10 +36,17 @@ function sanitize_tags(mixed $raw): string {
 }
 
 function snapshot_hash(array $note): string {
-    $fields = ['folder_id', 'title', 'content', 'color', 'tags', 'icon', 'is_pinned'];
+    $fields = ['folder_id', 'title', 'content', 'color', 'tags', 'icon', 'background', 'is_pinned'];
     $snapshot = [];
     foreach ($fields as $field) $snapshot[$field] = $note[$field] ?? null;
     return hash('sha256', json_encode($snapshot, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+}
+
+// A note's cover image, or null. Only an id from NOTE_BACKGROUNDS is ever
+// stored — anything else (including a blank "no cover" choice) is null.
+function sanitize_note_background(mixed $value): ?string {
+    $value = (string) $value;
+    return isset(NOTE_BACKGROUNDS[$value]) ? $value : null;
 }
 
 function store_note_version(array $note, string $source = 'autosave', bool $force = false): void {
@@ -54,11 +61,11 @@ function store_note_version(array $note, string $source = 'autosave', bool $forc
 
     db()->prepare(
         "INSERT INTO note_versions
-         (note_id, folder_id, title, content, color, tags, icon, is_pinned, source, snapshot_hash)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+         (note_id, folder_id, title, content, color, tags, icon, background, is_pinned, source, snapshot_hash)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )->execute([
         (int) $note['id'], $note['folder_id'] ?: null, $note['title'], $note['content'],
-        $note['color'], $note['tags'], $note['icon'], (int) $note['is_pinned'], $source, $hash,
+        $note['color'], $note['tags'], $note['icon'], $note['background'] ?? null, (int) $note['is_pinned'], $source, $hash,
     ]);
 
     $oldIds = db()->prepare("SELECT id FROM note_versions WHERE note_id = ? ORDER BY id DESC LIMIT 100, 100000");

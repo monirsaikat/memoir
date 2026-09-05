@@ -2,7 +2,21 @@
 declare(strict_types=1);
 
 define('MEMOIR_VERSION', trim((string) @file_get_contents(__DIR__ . '/VERSION')) ?: '1.0.0');
-define('MEMOIR_SCHEMA_VERSION', '2026-09-05-3');
+define('MEMOIR_SCHEMA_VERSION', '2026-09-05-4');
+
+// Illustrated cover images a note can pick in the appearance modal. Each id
+// maps to assets/img/note-bg-{id}.svg. Kept as the single source of truth so
+// the backend can validate against it and the frontend can list it.
+define('NOTE_BACKGROUNDS', [
+    'mountains' => 'Mountains',
+    'ocean' => 'Ocean',
+    'meadow' => 'Meadow',
+    'night-sky' => 'Night Sky',
+    'sunset' => 'Sunset',
+    'forest' => 'Forest',
+    'terminal' => 'Terminal',
+    'bubbles' => 'Bubbles',
+]);
 
 // Template rendering (Smarty, vendored under lib/smarty) and its view helpers.
 require_once __DIR__ . '/app/view.php';
@@ -171,6 +185,9 @@ function ensure_schema(): void {
         if (!db()->query("SHOW COLUMNS FROM notes LIKE 'share_token'")->fetch()) {
             db()->exec("ALTER TABLE notes ADD COLUMN share_token VARCHAR(64) NULL, ADD UNIQUE INDEX uq_share (share_token)");
         }
+        if (!db()->query("SHOW COLUMNS FROM notes LIKE 'background'")->fetch()) {
+            db()->exec("ALTER TABLE notes ADD COLUMN background VARCHAR(40) NULL AFTER icon");
+        }
         db()->exec(
             "CREATE TABLE IF NOT EXISTS note_versions (
                 id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -181,6 +198,7 @@ function ensure_schema(): void {
                 color VARCHAR(20) NOT NULL DEFAULT '#FFFFFF',
                 tags VARCHAR(500) NOT NULL DEFAULT '',
                 icon VARCHAR(80) NOT NULL DEFAULT 'fa-note-sticky',
+                background VARCHAR(40) NULL,
                 is_pinned TINYINT(1) NOT NULL DEFAULT 0,
                 source VARCHAR(20) NOT NULL DEFAULT 'autosave',
                 snapshot_hash CHAR(64) NOT NULL,
@@ -189,6 +207,9 @@ function ensure_schema(): void {
                 CONSTRAINT fk_versions_note FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
+        if (!db()->query("SHOW COLUMNS FROM note_versions LIKE 'background'")->fetch()) {
+            db()->exec("ALTER TABLE note_versions ADD COLUMN background VARCHAR(40) NULL AFTER icon");
+        }
         if (!db()->query("SHOW COLUMNS FROM users LIKE 'role'")->fetch()) {
             db()->exec("ALTER TABLE users ADD COLUMN role ENUM('owner','collaborator') NOT NULL DEFAULT 'owner'");
         }
@@ -285,10 +306,10 @@ function workspace_backup_payload(): array {
             "SELECT id, name, icon, color, sort_order, created_at, updated_at FROM folders ORDER BY sort_order, id"
         )->fetchAll(),
         'notes' => db()->query(
-            "SELECT id, folder_id, title, content, color, tags, icon, is_pinned, deleted_at, created_at, updated_at FROM notes ORDER BY id"
+            "SELECT id, folder_id, title, content, color, tags, icon, background, is_pinned, deleted_at, created_at, updated_at FROM notes ORDER BY id"
         )->fetchAll(),
         'versions' => db()->query(
-            "SELECT id, note_id, folder_id, title, content, color, tags, icon, is_pinned, source, snapshot_hash, created_at FROM note_versions ORDER BY id"
+            "SELECT id, note_id, folder_id, title, content, color, tags, icon, background, is_pinned, source, snapshot_hash, created_at FROM note_versions ORDER BY id"
         )->fetchAll(),
     ];
 }

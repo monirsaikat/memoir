@@ -48,6 +48,7 @@ ksort($tagCounts, SORT_NATURAL | SORT_FLAG_CASE);
 $folderIcons = ['fa-folder', 'fa-code', 'fa-server', 'fa-briefcase', 'fa-lightbulb', 'fa-book', 'fa-heart', 'fa-star', 'fa-globe', 'fa-terminal'];
 $noteIcons = ['fa-note-sticky', 'fa-code', 'fa-terminal', 'fa-lightbulb', 'fa-book', 'fa-heart', 'fa-star', 'fa-server', 'fa-list-check', 'fa-wand-magic-sparkles'];
 $accentColors = ['#6F5EE8', '#4E9A7C', '#E7A93D', '#D66666', '#4A86C5', '#A866B7', '#64748B'];
+$noteBackgrounds = NOTE_BACKGROUNDS;
 
 // Presentation data for the settings dialog (templates cannot call PHP).
 $themeAccents = ['#6F5EE8', '#3F7FC2', '#2E9E8F', '#3D8F68', '#C98A2D', '#D65C7E', '#C75454', '#64748B'];
@@ -109,6 +110,7 @@ render('pages/workspace/index.tpl', [
     'folderIcons' => $folderIcons,
     'noteIcons' => $noteIcons,
     'accentColors' => $accentColors,
+    'noteBackgrounds' => $noteBackgrounds,
     'themeAccents' => $themeAccents,
     'themes' => $themes,
     'backupIntervals' => $backupIntervals,

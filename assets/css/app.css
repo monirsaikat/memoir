@@ -1219,6 +1219,32 @@ button { cursor: pointer; }
 }
 .color-row button.selected { box-shadow: 0 0 0 2px #222; }
 
+/* Cover image picker (Note appearance modal) */
+.background-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+.background-grid button {
+    aspect-ratio: 16 / 10;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    background-size: cover;
+    background-position: center;
+}
+.background-grid button.selected { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.background-none { display: flex; align-items: center; justify-content: center; color: var(--muted); background: var(--panel2) !important; }
+
+/* Note cover image (top of the editor, above the title) */
+.note-cover {
+    display: none;
+    height: 160px;
+    margin: 0 -40px 4px;
+    background-size: cover;
+    background-position: center;
+}
+.note-cover.active { display: block; }
+
 .settings-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1612,6 +1638,7 @@ button { cursor: pointer; }
         --list: 340px;
     }
     .editor-body { padding: 0 28px; }
+    .note-cover { margin: 0 -28px 4px; }
 }
 
 @media (max-width: 760px) {
@@ -1666,6 +1693,8 @@ button { cursor: pointer; }
 
     .editor-head { padding: 0 14px; }
     .editor-body { padding: 0 16px; }
+    .note-cover { height: 110px; margin: 0 -16px 4px; }
+    .background-grid { grid-template-columns: repeat(4, 1fr); }
     .title-input {
         font-size: 28px;
         padding-top: 28px;

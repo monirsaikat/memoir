@@ -174,6 +174,7 @@ case 'save-note':
     $folder = isset($data['folder_id']) && $data['folder_id'] !== '' ? (int) $data['folder_id'] : null;
     $icon = preg_match('/^fa-[a-z0-9-]+$/', (string) ($data['icon'] ?? '')) ? $data['icon'] : 'fa-note-sticky';
     $color = preg_match('/^#[A-Fa-f0-9]{6}$/', (string) ($data['color'] ?? '')) ? $data['color'] : '#6F5EE8';
+    $background = sanitize_note_background($data['background'] ?? '');
     $tags = sanitize_tags($data['tags'] ?? []);
     $pinned = !empty($data['is_pinned']) ? 1 : 0;
 
@@ -193,15 +194,16 @@ case 'save-note':
             || (int) ($existing['folder_id'] ?? 0) !== (int) ($folder ?? 0)
             || (string) $existing['icon'] !== $icon
             || strtoupper((string) $existing['color']) !== strtoupper($color)
+            || (string) ($existing['background'] ?? '') !== (string) ($background ?? '')
             || (string) $existing['tags'] !== $tags
             || (int) $existing['is_pinned'] !== $pinned;
         if ($changed) {
             store_note_version($existing);
             db()->prepare(
                 "UPDATE notes
-                 SET folder_id = ?, title = ?, content = ?, icon = ?, color = ?, tags = ?, is_pinned = ?, updated_at = NOW()
+                 SET folder_id = ?, title = ?, content = ?, icon = ?, color = ?, background = ?, tags = ?, is_pinned = ?, updated_at = NOW()
                  WHERE id = ?"
-            )->execute([$folder, $title, $content, $icon, $color, $tags, $pinned, $id]);
+            )->execute([$folder, $title, $content, $icon, $color, $background, $tags, $pinned, $id]);
             log_activity($user['id'], $id, 'note_updated', sprintf('%s edited "%s"', $user['name'], $title));
         }
         db()->commit();
@@ -228,7 +230,7 @@ case 'note-version':
     $versionId = (int) ($_GET['version_id'] ?? 0);
     require_note_access($noteId, $user['id']);
     $stmt = db()->prepare(
-        "SELECT id, note_id, folder_id, title, content, color, tags, icon, is_pinned, source, created_at
+        "SELECT id, note_id, folder_id, title, content, color, tags, icon, background, is_pinned, source, created_at
          FROM note_versions WHERE id = ? AND note_id = ? LIMIT 1"
     );
     $stmt->execute([$versionId, $noteId]);
@@ -262,10 +264,10 @@ case 'restore-version':
             if (!$folderCheck->fetchColumn()) $folderId = null;
         }
         db()->prepare(
-            "UPDATE notes SET folder_id = ?, title = ?, content = ?, color = ?, tags = ?, icon = ?, is_pinned = ?, updated_at = NOW() WHERE id = ?"
+            "UPDATE notes SET folder_id = ?, title = ?, content = ?, color = ?, tags = ?, icon = ?, background = ?, is_pinned = ?, updated_at = NOW() WHERE id = ?"
         )->execute([
             $folderId, $version['title'], $version['content'], $version['color'], $version['tags'],
-            $version['icon'], (int) $version['is_pinned'], $noteId,
+            $version['icon'], $version['background'] ?? null, (int) $version['is_pinned'], $noteId,
         ]);
         db()->commit();
         log_activity($user['id'], $noteId, 'version_restored', sprintf('%s restored an earlier version of "%s"', $user['name'], $version['title']));
