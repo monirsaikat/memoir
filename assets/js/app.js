@@ -658,7 +658,9 @@
     refreshList();
   });
 
-  $('#folderList').addEventListener('click', e => {
+  // #folderList only exists for workspace owners — collaborators never see
+  // the folder tree, so every reference to it here must tolerate null.
+  $('#folderList')?.addEventListener('click', e => {
     const btn = e.target.closest('.folder-item');
     if (!btn) return;
     filterFolder = btn.dataset.folder;
@@ -1907,7 +1909,8 @@
     openModal('#folderModal');
   }
 
-  $('#addFolder').onclick = () => openFolderModal();
+  const addFolderBtn = $('#addFolder');
+  if (addFolderBtn) addFolderBtn.onclick = () => openFolderModal();
 
   $('#folderIcons').onclick = e => {
     const btn = e.target.closest('button');
@@ -1953,7 +1956,7 @@
       }
     } else {
       const d = await api('folder', { method: 'POST', body: JSON.stringify(payload) });
-      $('#folderList').insertAdjacentHTML('beforeend', folderRowHtml(d));
+      $('#folderList')?.insertAdjacentHTML('beforeend', folderRowHtml(d));
     }
     $('#folderName').value = '';
     closeModal($('#folderModal'));
@@ -1980,7 +1983,7 @@
     menu.style.left = `${left}px`;
   }
 
-  $('#folderList').addEventListener('click', e => {
+  $('#folderList')?.addEventListener('click', e => {
     const btn = e.target.closest('.folder-menu-btn');
     if (!btn) return;
     e.stopPropagation();

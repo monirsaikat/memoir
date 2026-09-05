@@ -5,6 +5,18 @@ All notable changes to Memoir are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.8] - 2026-09-05
+
+### Fixed
+
+- Collaborator accounts got a completely broken app: the sidebar's
+  folder list only renders for the workspace owner (added in 2.0.3),
+  but the client script still wired click handlers onto it
+  unconditionally. For a collaborator, that element doesn't exist, so
+  the very first uncaught error stopped the rest of the script from
+  running at all — breaking notes, search, and everything else. Every
+  folder-list reference now tolerates it being absent.
+
 ## [2.0.71] - 2026-09-05
 
 ### Added
@@ -350,7 +362,8 @@ All notable changes to Memoir are documented here. This project follows
 - Prevented password managers from autofilling the note search, improved note
   previews and empty states, and added usable mobile list/editor navigation.
 
-[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.71...HEAD
+[Unreleased]: https://github.com/monirsaikat/memoir/compare/v2.0.8...HEAD
+[2.0.8]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.8
 [2.0.71]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.71
 [2.0.7]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.7
 [2.0.6]: https://github.com/monirsaikat/memoir/releases/tag/v2.0.6
